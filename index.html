@@ -38,8 +38,9 @@ body{font-family:'Inter',sans-serif;background:#f3faff;min-height:100vh}
 .pin-dot{width:13px;height:13px;border-radius:50%;background:#c5d9f0;transition:background .15s}
 .pin-dot.filled{background:#0040a1}
 .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;width:220px;margin-bottom:1rem}
-.key-btn{background:#fff;border:none;border-radius:13px;padding:.85rem 0;font-size:1.05rem;font-family:'Public Sans',sans-serif;font-weight:500;color:#0040a1;cursor:pointer;box-shadow:0 2px 8px rgba(0,64,161,.08);transition:background .1s,transform .1s}
-.key-btn:active{background:#e0eeff;transform:scale(.95)}
+.key-btn{background:#e0f2fe;border:none;border-radius:12px;padding:.85rem 0;font-size:1.05rem;font-family:'Public Sans',sans-serif;font-weight:500;color:#0040a1;cursor:pointer;box-shadow:0 4px 10px rgba(0,100,200,.15),0 1px 3px rgba(0,64,161,.1);transition:background .3s,color .3s,transform .3s,box-shadow .3s}
+.key-btn:hover{background:#3b82f6;color:#fff;transform:scale(1.05);box-shadow:0 6px 16px rgba(59,130,246,.35),0 2px 6px rgba(0,64,161,.15)}
+.key-btn:active{background:#2563eb;transform:scale(.97)}
 .key-del{font-size:.8rem;color:#5a7ba8}
 .login-hint{font-size:.7rem;color:#8babc8;margin-top:.4rem}
 .login-error{font-size:.78rem;color:#c0392b;min-height:1rem;margin-top:.3rem;font-weight:500}
