@@ -28,7 +28,7 @@ body{font-family:'Inter',sans-serif;background:#f3faff;min-height:100vh}
 .hidden{display:none!important}
 
 /* LOGIN */
-#login-screen{background:#f3faff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
+#login-screen{background:#9fd0f3;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
 .login-logo{font-family:'Public Sans',sans-serif;font-size:2.2rem;font-weight:700;color:#0040a1;letter-spacing:.08em;margin-bottom:.15rem;text-align:center}
 .login-org{font-size:.72rem;color:#5a7ba8;margin-bottom:1.5rem;text-align:center;font-family:'Noto Sans Malayalam','Public Sans',sans-serif}
 .user-selector{display:flex;gap:.65rem;margin-bottom:1.5rem;flex-wrap:wrap;justify-content:center}
@@ -306,10 +306,24 @@ body{font-family:'Inter',sans-serif;background:#f3faff;min-height:100vh}
    .print-portrait  → Final Report tab  → A4 Portrait
    .print-landscape → Forms 01-04       → A4 Landscape
    These classes are added to <body> by printForm() / printFinal() */
-@page portrait-page  { size:A4 portrait;  margin:1.2cm 1.4cm }
-@page landscape-page { size:A4 landscape; margin:1cm 1.2cm   }
+@page portrait-page  { size:A4 portrait;  margin:10mm }
+@page landscape-page { size:A4 landscape; margin:10mm }
 
+/* Custom print footer — shown only during print */
+#hmc-print-footer{display:none}
 @media print{
+  @page { margin: 10mm; }
+  #hmc-print-footer{
+    display:block!important;
+    position:fixed;
+    bottom:0;left:0;width:100%;
+    text-align:center;
+    font-family:'Public Sans',sans-serif;
+    font-size:8pt;color:#555;
+    border-top:1px solid #ccc;
+    padding-top:3pt;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
   /* ── Global reset ── */
   #login-screen,#toast,.tab-bar,.dash-header,.dash-back,
   .action-row,.no-print,.admin-review-section,
@@ -503,84 +517,158 @@ body{font-family:'Inter',sans-serif;background:#f3faff;min-height:100vh}
 
 /* Print Reports print styles merged into unified @media print block above */
 
-.wa-section{
-  width:min(680px,94vw);   /* wide enough for 3 side-by-side boxes */
-  margin-top:1.2rem;
+/* ── SUPPORT BUTTON ── */
+.support-btn-wrap{
+  margin-top:1.4rem;
   display:flex;
-  flex-direction:row;      /* horizontal row */
-  flex-wrap:wrap;          /* wraps to next line on narrow screens */
   justify-content:center;
+}
+.support-btn{
+  font-family:'Public Sans',sans-serif;
+  font-size:.78rem;
+  font-weight:700;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+  color:#fff;
+  background:linear-gradient(135deg,#56b4e9 0%,#0078c8 60%,#0040a1 100%);
+  border:none;
+  border-radius:12px;
+  padding:.72rem 2rem;
+  cursor:pointer;
+  box-shadow:0 4px 18px rgba(0,100,200,.32),0 1.5px 5px rgba(0,64,161,.18);
+  transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;
+  display:flex;
+  align-items:center;
   gap:.55rem;
 }
-.wa-section-title{
-  font-family:'Public Sans',sans-serif;
-  font-size:.62rem;
-  font-weight:700;
-  color:#5a7ba8;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  text-align:center;
-  margin-bottom:.08rem;
+.support-btn:hover{
+  transform:scale(1.06);
+  box-shadow:0 8px 28px rgba(0,100,200,.42),0 3px 10px rgba(0,64,161,.22);
+  filter:brightness(1.07);
 }
-.wa-box{
-  flex:1 1 180px;          /* grow/shrink, min 180px — 3 fit side-by-side */
-  max-width:210px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:.3rem;
-  padding:.7rem .75rem .6rem;
-  border-radius:12px;
-  background:#e3f2fd;
-  border:1.5px solid #b3d9f7;
+.support-btn svg{width:18px;height:18px;fill:#fff;flex-shrink:0}
+
+/* ── SUPPORT MODAL ── */
+#support-modal{
+  display:none;
+  position:fixed;inset:0;z-index:9998;
+  background:rgba(0,30,70,.55);
+  backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;
+  padding:1rem;
+}
+#support-modal.open{display:flex}
+.support-modal-box{
+  background:#fff;
+  border-radius:20px;
+  width:min(520px,96vw);
+  max-height:90vh;
+  overflow-y:auto;
+  box-shadow:0 12px 48px rgba(0,30,100,.28);
+  animation:modalIn .22s ease;
+}
+@keyframes modalIn{from{transform:scale(.93) translateY(18px);opacity:0}to{transform:none;opacity:1}}
+.support-modal-hdr{
+  background:linear-gradient(135deg,#56b4e9 0%,#0040a1 100%);
+  border-radius:20px 20px 0 0;
+  padding:1.1rem 1.4rem .9rem;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.support-modal-title{
+  font-family:'Public Sans',sans-serif;
+  font-size:.92rem;font-weight:700;
+  color:#fff;letter-spacing:.06em;text-transform:uppercase;
+}
+.support-modal-close{
+  background:rgba(255,255,255,.2);border:none;border-radius:50%;
+  width:30px;height:30px;cursor:pointer;color:#fff;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
+}
+.support-modal-close:hover{background:rgba(255,255,255,.38)}
+.support-modal-body{padding:1.2rem 1.4rem 1.4rem}
+.support-section-lbl{
+  font-family:'Public Sans',sans-serif;
+  font-size:.62rem;font-weight:700;
+  color:#5a7ba8;letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:.65rem;margin-top:.1rem;
+}
+/* WhatsApp contact cards inside modal */
+.wa-modal-contacts{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.1rem}
+.wa-modal-box{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.65rem .9rem;border-radius:12px;
+  background:#e3f2fd;border:1.5px solid #b3d9f7;
   text-decoration:none;
   box-shadow:0 1px 5px rgba(0,80,160,.07);
-  transition:background .3s ease,border-color .3s ease,box-shadow .3s ease;
+  transition:background .25s,border-color .25s,box-shadow .25s;
 }
-.wa-box:hover{
-  background:#25d366;
-  border-color:#1da851;
+.wa-modal-box:hover{
+  background:#25d366;border-color:#1da851;
   box-shadow:0 4px 14px rgba(37,211,102,.32);
 }
-.wa-box-name{
-  font-family:'Public Sans',sans-serif;
-  font-size:.74rem;
-  font-weight:700;
-  color:#1a2e4a;
-  text-align:center;
-  transition:color .3s;
+.wa-modal-icon{
+  width:36px;height:36px;border-radius:50%;
+  background:#25d366;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;box-shadow:0 2px 6px rgba(37,211,102,.38);
+  transition:background .25s;
 }
-.wa-box:hover .wa-box-name{color:#fff}
-.wa-box-right{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:.22rem;
+.wa-modal-box:hover .wa-modal-icon{background:rgba(255,255,255,.28);box-shadow:none}
+.wa-modal-icon svg{width:20px;height:20px;fill:#fff}
+.wa-modal-info{display:flex;flex-direction:column;gap:2px}
+.wa-modal-name{
+  font-family:'Public Sans',sans-serif;font-size:.8rem;font-weight:700;
+  color:#1a2e4a;transition:color .25s;
 }
-.wa-box-num{
-  font-family:'Inter',sans-serif;
-  font-size:.66rem;
-  font-weight:500;
-  color:#0040a1;
-  text-align:center;
-  transition:color .3s;
+.wa-modal-box:hover .wa-modal-name{color:#fff}
+.wa-modal-num{
+  font-family:'Inter',sans-serif;font-size:.7rem;font-weight:500;
+  color:#0040a1;transition:color .25s;
 }
-.wa-box:hover .wa-box-num{color:#fff}
-.wa-box-icon{
-  width:32px;height:32px;
-  border-radius:50%;
-  background:#25d366;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-  box-shadow:0 2px 6px rgba(37,211,102,.38);
-  transition:background .3s,box-shadow .3s;
+.wa-modal-box:hover .wa-modal-num{color:#e8ffe8}
+/* Blog / resource links */
+.support-links{display:flex;flex-direction:column;gap:.55rem;margin-bottom:1.1rem}
+.support-link-card{
+  display:flex;align-items:center;gap:.85rem;
+  padding:.65rem .9rem;border-radius:12px;
+  background:#f3faff;border:1.5px solid #c5d9f0;
+  text-decoration:none;
+  transition:background .22s,border-color .22s,box-shadow .22s;
 }
-.wa-box:hover .wa-box-icon{
-  background:rgba(255,255,255,.28);
-  box-shadow:none;
+.support-link-card:hover{
+  background:#e0f0ff;border-color:#0078c8;
+  box-shadow:0 3px 12px rgba(0,100,200,.15);
 }
-.wa-box-icon svg{width:18px;height:18px;fill:#fff}
+.support-link-img{
+  width:44px;height:44px;border-radius:8px;
+  object-fit:cover;flex-shrink:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.12);
+}
+.support-link-info{display:flex;flex-direction:column;gap:2px}
+.support-link-title{
+  font-family:'Public Sans',sans-serif;font-size:.78rem;font-weight:700;color:#0040a1;
+}
+.support-link-url{font-family:'Inter',sans-serif;font-size:.65rem;color:#8babc8}
+/* PDF download button */
+.support-pdf-btn{
+  display:flex;align-items:center;gap:.5rem;
+  width:100%;padding:.65rem 1.1rem;
+  border-radius:12px;border:1.5px solid #c5d9f0;
+  background:#f3faff;cursor:pointer;
+  font-family:'Public Sans',sans-serif;font-size:.78rem;font-weight:600;color:#0040a1;
+  transition:background .2s,box-shadow .2s;
+  text-decoration:none;
+}
+.support-pdf-btn:hover{background:#e0f0ff;box-shadow:0 3px 12px rgba(0,100,200,.15)}
+.support-pdf-btn svg{width:20px;height:20px;flex-shrink:0;fill:#0040a1}
+.support-divider{height:1px;background:#edf4ff;margin:.9rem 0}
+
+/* ── FY SELECTOR ─────────────────────────────────────── */
+.fy-selector-wrap{display:flex;align-items:center;gap:.42rem;background:rgba(255,255,255,.13);border:1.5px solid rgba(135,206,250,.45);border-radius:9px;padding:.28rem .6rem;flex-shrink:0}
+.fy-selector-lbl{font-size:.57rem;font-family:'Public Sans',sans-serif;color:#b8d9ff;font-weight:700;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+.fy-sel{background:transparent;border:none;outline:none;font-size:.72rem;font-family:'Public Sans',sans-serif;font-weight:600;color:#fff;cursor:pointer;padding:.18rem .3rem;border-radius:5px}
+.fy-sel option{background:#0040a1;color:#fff}
+.fy-sel:focus{background:rgba(135,206,250,.2)}
 </style>
 </head>
 <body>
@@ -604,41 +692,174 @@ body{font-family:'Inter',sans-serif;background:#f3faff;min-height:100vh}
   <div class="login-error" id="login-error"></div>
   <div class="login-hint" id="login-hint"></div>
 
-  <!-- WhatsApp Support Section -->
-  <div class="wa-section">
-    <div class="wa-section-title" style="width:100%;text-align:center;margin-bottom:.1rem">Contact for Support</div>
-
-    <a class="wa-box" href="https://wa.me/917025081081" target="_blank" rel="noopener">
-      <div class="wa-box-right">
-        <div class="wa-box-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-        <span class="wa-box-name">Ramakrishnan.K</span>
-        <span class="wa-box-num">+91 70250 81081</span>
-      </div>
-    </a>
-
-    <a class="wa-box" href="https://wa.me/919447596675" target="_blank" rel="noopener">
-      <div class="wa-box-right">
-        <div class="wa-box-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-        <span class="wa-box-name">Sumesh.T.K</span>
-        <span class="wa-box-num">+91 94475 96675</span>
-      </div>
-    </a>
-
-    <a class="wa-box" href="https://wa.me/919946479273" target="_blank" rel="noopener">
-      <div class="wa-box-right">
-        <div class="wa-box-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-        <span class="wa-box-name">Pratheesh.M.P</span>
-        <span class="wa-box-num">+91 99464 79273</span>
-      </div>
-    </a>
+  <!-- CONTACT FOR SUPPORT — stylish button replacing old 3-box layout -->
+  <div class="support-btn-wrap">
+    <button class="support-btn" onclick="document.getElementById('support-modal').classList.add('open')">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      Contact for Support
+    </button>
   </div>
+
+<div class="visitor-counter-card">
+    <h3>👁️സന്ദർശകർ <div id="count-value"></div>                    </h3>
+    
 </div>
+
+<style>
+    .visitor-counter-card {
+        background-color: #e0f2fe; /* Sky Blue പശ്ചാത്തലം */
+        border: 2px solid #7dd3fc;
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        max-width: 200px;
+        margin: 10px auto;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .visitor-counter-card h3 {
+        margin: 0;
+        font-size: 14px;
+        color: #0369a1;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    #count-value {
+        font-size: 28px;
+        font-weight: bold;
+        color: #0c4a6e;
+        margin-top: 5px;
+    }
+</style>
+
+<script>
+    // നിങ്ങളുടെ വർക്കറിൽ നിന്ന് ഡാറ്റ എടുക്കുന്നു
+    fetch('https://sumteck.tksumesh85.workers.dev?site=hmc')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('count-value').innerText = data.views;
+        })
+        .catch(err => {
+            document.getElementById('count-value').innerText = "0";
+            console.error("Error loading counter", err);
+        });
+</script>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SUPPORT MODAL / POPUP
+══════════════════════════════════════════════════════ -->
+<div id="support-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="support-modal-box">
+    <div class="support-modal-hdr">
+      <span class="support-modal-title">🛟 Contact for Support</span>
+      <button class="support-modal-close" onclick="document.getElementById('support-modal').classList.remove('open')">✕</button>
+    </div>
+    <div class="support-modal-body">
+
+      <!-- WhatsApp Contacts -->
+      <div class="support-section-lbl">WhatsApp Support</div>
+      <div class="wa-modal-contacts">
+
+        <a class="wa-modal-box" href="https://wa.me/917025081081" target="_blank" rel="noopener">
+          <div class="wa-modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </div>
+          <div class="wa-modal-info">
+            <span class="wa-modal-name">Ramakrishnan.K</span>
+            <span class="wa-modal-num">+91 70250 81081</span>
+          </div>
+        </a>
+
+        <a class="wa-modal-box" href="https://wa.me/919447596675" target="_blank" rel="noopener">
+          <div class="wa-modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </div>
+          <div class="wa-modal-info">
+            <span class="wa-modal-name">Sumesh.T.K</span>
+            <span class="wa-modal-num">+91 94475 96675</span>
+          </div>
+        </a>
+
+        <a class="wa-modal-box" href="https://wa.me/919946479273" target="_blank" rel="noopener">
+          <div class="wa-modal-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </div>
+          <div class="wa-modal-info">
+            <span class="wa-modal-name">Pratheesh.M.P</span>
+            <span class="wa-modal-num">+91 99464 79273</span>
+          </div>
+        </a>
+
+      </div><!-- /wa-modal-contacts -->
+
+      <div class="support-divider"></div>
+
+      <!-- Blog / Resource Links -->
+      <div class="support-section-lbl">Resources &amp; Blogs</div>
+      <div class="support-links">
+
+        <!-- Blog Link 1: Sumteck -->
+        <a class="support-link-card" href="https://www.sumteck.in/" target="_blank" rel="noopener">
+          <img class="support-link-img"
+               src="data:image/x-icon;base64,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AP8AAQD/AAEA/wABAf8BAQD/AAEA/wABAP8BAQH/AAEA/wABAP8AAAD/AAAA/wABAP8AAQH/AAEA/wABAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAD/AAAA/wAAAP8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+               alt="Sumteck Blog">
+          <div class="support-link-info">
+            <span class="support-link-title">Sumteck Blog</span>
+            <span class="support-link-url">www.sumteck.in</span>
+          </div>
+        </a>
+
+        <!-- Blog Link 2: Rubundroid — TODO: Replace the src below with the actual image URL -->
+        <a class="support-link-card" href="https://www.rubundroid.com/" target="_blank" rel="noopener">
+          <img class="support-link-img"
+               src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjkvFhRAN7Tog81k1i-MQP1xBAcdppCMubjDuoAdijb22Vepen1Lku_rumgiOk8X0RGPL7HwXEpCFA2eAtzBSCMPxesaLGGUYXQ-I2Cb5DHs8yCxsFqinIhhD4bLkDgfeRF85ebTQYKyWZC8XEyejdiPAc8TU0SYFsBXlfBUmQBjUfWg9E6ffF1nSLndIQ/s74/Screenshot%202026-04-13%20213848.png"
+          <!-- ↑↑ REPLACE the src above with the actual Rubundroid image URL ↑↑ -->
+          <div class="support-link-info">
+            <span class="support-link-title">Rubundroid Blog</span>
+            <span class="support-link-url">www.rubundroid.com</span>
+          </div>
+        </a>
+
+      </div><!-- /support-links -->
+
+      <div class="support-divider"></div>
+
+      <!-- PDF Help Guide Download -->
+      <div class="support-section-lbl">Downloads</div>
+<a class="support-pdf-btn" href="https://drive.google.com/file/d/14ooNx3GDWYGpo-eiF_zKTgIE7EfXo_8E/view?usp=sharing" target="_blank">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+  Download Help Guide PDF
+</a>
+<a class="support-pdf-btn" href="നിങ്ങളുടെ_പുതിയ_ഡ്രൈവ്_ലിങ്ക്_ഇവിടെ_നൽകുക" target="_blank" style="margin-top: 10px;">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+  Download Second PDF Name
+</a>
+
+    </div><!-- /support-modal-body -->
+  </div><!-- /support-modal-box -->
+</div><!-- /support-modal -->
 
 <!-- DASHBOARD -->
 <div id="dashboard-screen" class="hidden">
   <div class="dash-header">
-    <div class="dash-back" onclick="logout()">&#8592; Exit</div>
+    <div class="dash-back" onclick="logout()" style="
+    background-color: #60b1e7; 
+    color: #ffffff; 
+    padding: 10px 20px; 
+    border-radius: 8px; 
+    display: inline-block; 
+    cursor: pointer; 
+    font-weight: bold;
+    text-align: center;">
+    &#8592; Exit
+</div>
     <div class="dash-logo" id="dash-logo">HMC<small>Audit Management</small></div>
+    <div class="fy-selector-wrap" id="fy-selector-wrap" title="Select Financial Year">
+      <span class="fy-selector-lbl">FY</span>
+      <select class="fy-sel" id="global-fy-select" onchange="onGlobalFYChange(this.value)"></select>
+    </div>
     <div class="dash-avatar" id="user-avatar">AD<div class="avatar-badge">ADMIN</div></div>
   </div>
   <div class="tab-bar" id="tab-bar"></div>
@@ -661,7 +882,9 @@ const LS={
   F02:'hmc_f02_v5', F02_CUSTOM:'hmc_f02_custom_v2', F02_PENDING:'hmc_f02_pending_v1',
   F03:'hmc_f03_v4', F03_CUSTOM:'hmc_f03_custom_v2', F03_PENDING:'hmc_f03_pending_v1',
   F01_REC:'hmc_f01_rec_v2', F01_PAY:'hmc_f01_pay_v2',
-  F04:'hmc_f04_v1', OB:'hmc_ob_v2', OB_TREA:'hmc_ob_trea_v1', OB_BANK:'hmc_ob_bank_v1',
+  F04:'hmc_f04_v1',
+  /* OB keys are now per-FY — use obKey() helpers below */
+  OB:'hmc_ob_v2', OB_TREA:'hmc_ob_trea_v1', OB_BANK:'hmc_ob_bank_v1', /* legacy fallback */
   FINAL_OVERRIDES:'hmc_final_overrides_v1'
 };
 
@@ -717,7 +940,7 @@ function buildLoginChips(){
   });
   /* Pre-select first chip */
   if(!currentUser) currentUser = users.find(u=>!u.blocked) || users[0];
-  document.getElementById('login-hint').textContent = 'Enter your PIN to continue';
+  document.getElementById('login-hint').textContent = 'Enter your PIN 1234 to continue and reset pin in admin page ';
 }
 
 function selectUser(el, uid){
@@ -763,6 +986,9 @@ function checkPin(){
   /* Transition to dashboard */
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('dashboard-screen').classList.remove('hidden');
+
+  /* Populate / refresh the FY year picker in the header */
+  buildFYDropdown();
 
   const av = document.getElementById('user-avatar');
   av.childNodes[0].textContent = currentUser.name.substring(0,2).toUpperCase();
@@ -814,12 +1040,73 @@ function fmtSigned(n){return (n<0?'−':'')+'₹'+Math.abs(n).toFixed(2);}
 function fmtIN(n){return n===0?'—':'₹'+Math.abs(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 /* ══════════════════════════════════════════════════════
-   FINANCIAL YEAR
+   FINANCIAL YEAR — SELECTOR, FILTER & PER-FY OB
 ══════════════════════════════════════════════════════ */
-function getFinancialYear(){
+
+/* Detect the current FY start year from system clock (Apr 1 = new FY) */
+function detectCurrentFYStart(){
   const now=new Date(), m=now.getMonth(), y=now.getFullYear();
-  const s=m>=3?y:y-1, e=s+1;
-  return {label:`${s}-${String(e).slice(-2)}`, start:s, end:e};
+  return m>=3 ? y : y-1;
+}
+
+/* The globally-selected FY start year (e.g. 2025 → FY 2025-2026) */
+let _selectedFYStart = detectCurrentFYStart();
+
+/* Build a full FY descriptor from a start year */
+function fyFromStart(s){
+  const e=s+1;
+  return {
+    start:s, end:e,
+    label:`${s}-${String(e).slice(-2)}`,   /* "2025-26" — used in titles */
+    fullLabel:`${s}-${e}`,                 /* "2025-2026" — used in dropdown */
+    from:`${s}-04-01`,
+    to:`${e}-03-31`
+  };
+}
+
+/* Always returns the currently-selected FY */
+function getFinancialYear(){ return fyFromStart(_selectedFYStart); }
+
+/* Check whether a YYYY-MM-DD date string falls inside a given FY */
+function dateInFY(d, fy){
+  if(!d) return false;
+  return d >= fy.from && d <= fy.to;
+}
+
+/* ── Per-FY Opening Balance keys ─────────────────────── */
+/* Keys: hmc_ob_fy_YYYY_cash / _trea / _bank               */
+function obKey(type){ return `hmc_ob_fy_${_selectedFYStart}_${type}`; }
+
+function getOB(){ return parseFloat(lsGet(obKey('cash'), lsGet(LS.OB,0)))||0; }
+function getOBT(){ return parseFloat(lsGet(obKey('trea'), lsGet(LS.OB_TREA,0)))||0; }
+function getOBB(){ return parseFloat(lsGet(obKey('bank'), lsGet(LS.OB_BANK,0)))||0; }
+
+function saveOB(field,val){
+  const type = field==='OB'?'cash': field==='OB_TREA'?'trea':'bank';
+  lsSet(obKey(type), parseFloat(val)||0);
+  /* Also keep legacy key in sync for first-run backward-compat */
+  lsSet(LS[field], parseFloat(val)||0);
+  _syncAll();
+}
+
+/* ── FY Dropdown UI ──────────────────────────────────── */
+function buildFYDropdown(){
+  const sel=document.getElementById('global-fy-select');
+  if(!sel) return;
+  const cy=new Date().getFullYear();
+  const years=Array.from({length:20},(_,i)=>cy-2+i); /* 4 yrs back, 2 ahead */
+  sel.innerHTML=years.map(y=>{
+    const fy=fyFromStart(y);
+    return `<option value="${y}"${y===_selectedFYStart?' selected':''}>${fy.fullLabel}</option>`;
+  }).join('');
+}
+
+/* Called when user picks a different year from the dropdown */
+function onGlobalFYChange(val){
+  _selectedFYStart=parseInt(val,10);
+  /* Re-render whichever tab is active */
+  const at=document.querySelector('.tab-item.active');
+  if(at) switchTabByIdx(parseInt(at.dataset.idx));
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1142,9 +1429,11 @@ function manualRecTotal(r){return (parseFloat(r.cash)||0)+(parseFloat(r.treasury
 function manualPayTotal(p){return (parseFloat(p.cash)||0)+(parseFloat(p.treasury)||0)+(parseFloat(p.bank)||0);}
 
 function buildAutoReceipts(){
+  const fy=getFinancialYear();
   const rows=[];
   const approved=f02Pending.filter(e=>e.status==='approved');
   approved.forEach(e=>{
+    if(!dateInFY(e.date,fy)) return;            /* ← FY filter */
     f02AllCols().forEach(c=>{
       const val=parseFloat(e[c.key])||0;
       if(val) rows.push({date:e.date||'',desc:c.ml,cash:val,source:'F02',entryId:e.id,colKey:c.key});
@@ -1153,9 +1442,11 @@ function buildAutoReceipts(){
   return rows.filter(r=>!f01ExcludedRec.includes(r.date+'|'+r.desc+'|'+r.cash));
 }
 function buildAutoPayments(){
+  const fy=getFinancialYear();
   const rows=[];
   const approved=f03Pending.filter(e=>e.status==='approved');
   approved.forEach(e=>{
+    if(!dateInFY(e.date,fy)) return;            /* ← FY filter */
     f03AllCols().forEach(c=>{
       const val=parseFloat(e[c.key])||0;
       if(val) rows.push({date:e.date||'',voucher:e.voucher||'',desc:c.ml,cash:val,source:'F03',entryId:e.id,colKey:c.key});
@@ -1178,7 +1469,7 @@ function addF01ManualRec(){f01ManualRec.push(makeManualRec()); lsSet(LS.F01_REC,
 function delF01ManualRec(id){f01ManualRec=f01ManualRec.filter(r=>r.id!==id); lsSet(LS.F01_REC,f01ManualRec); renderF01(); _syncAll();}
 function addF01ManualPay(){f01ManualPay.push(makeManualPay()); lsSet(LS.F01_PAY,f01ManualPay); renderF01();}
 function delF01ManualPay(id){f01ManualPay=f01ManualPay.filter(p=>p.id!==id); lsSet(LS.F01_PAY,f01ManualPay); renderF01(); _syncAll();}
-function onObChange(field,val){lsSet(LS[field],parseFloat(val)||0); _syncAll();}
+function onObChange(field,val){ saveOB(field, val); }
 
 /* Admin: exclude an auto-receipt row by index */
 function delAutoRec(idx){
@@ -1226,12 +1517,13 @@ function saveF01ManualEntries(){
 }
 
 function refreshF01Totals(){
-  const ob0=parseFloat(lsGet(LS.OB,0))||0;
-  const obT=parseFloat(lsGet(LS.OB_TREA,0))||0;
-  const obB=parseFloat(lsGet(LS.OB_BANK,0))||0;
+  const fy=getFinancialYear();
+  const ob0=getOB(), obT=getOBT(), obB=getOBB();
   const ar=buildAutoReceipts(), ap=buildAutoPayments();
-  const totRec=(ob0+obT+obB)+ar.reduce((s,r)=>s+r.cash,0)+f01ManualRec.reduce((s,r)=>s+manualRecTotal(r),0);
-  const totPay=ap.reduce((s,p)=>s+p.cash,0)+f01ManualPay.reduce((s,p)=>s+manualPayTotal(p),0);
+  const manRec=f01ManualRec.filter(r=>dateInFY(r.date,fy));
+  const manPay=f01ManualPay.filter(p=>dateInFY(p.date,fy));
+  const totRec=(ob0+obT+obB)+ar.reduce((s,r)=>s+r.cash,0)+manRec.reduce((s,r)=>s+manualRecTotal(r),0);
+  const totPay=ap.reduce((s,p)=>s+p.cash,0)+manPay.reduce((s,p)=>s+manualPayTotal(p),0);
   const closing=totRec-totPay;
   const elTR=document.getElementById('cb-total-rec'),elTP=document.getElementById('cb-total-pay'),elCL=document.getElementById('cb-closing'),elBar=document.getElementById('cb-closing-bar');
   if(elTR) elTR.textContent=fmt(totRec);
@@ -1273,15 +1565,17 @@ function rejectF03Entry(id){
 
 function renderF01(){
   const ws=document.getElementById('workspace');
-  const ob0=parseFloat(lsGet(LS.OB,0))||0;
-  const obT=parseFloat(lsGet(LS.OB_TREA,0))||0;
-  const obB=parseFloat(lsGet(LS.OB_BANK,0))||0;
+  const fy=getFinancialYear();
+  const ob0=getOB(), obT=getOBT(), obB=getOBB();
   const ar=buildAutoReceipts(), ap=buildAutoPayments();
+  /* Only show manual rows that belong to the selected FY */
+  const manRec=f01ManualRec.filter(r=>dateInFY(r.date,fy));
+  const manPay=f01ManualPay.filter(p=>dateInFY(p.date,fy));
   const totRecAuto=ar.reduce((s,r)=>s+r.cash,0);
-  const totRecManual=f01ManualRec.reduce((s,r)=>s+manualRecTotal(r),0);
+  const totRecManual=manRec.reduce((s,r)=>s+manualRecTotal(r),0);
   const totalRec=(ob0+obT+obB)+totRecAuto+totRecManual;
   const totPayAuto=ap.reduce((s,p)=>s+p.cash,0);
-  const totPayManual=f01ManualPay.reduce((s,p)=>s+manualPayTotal(p),0);
+  const totPayManual=manPay.reduce((s,p)=>s+manualPayTotal(p),0);
   const totalPay=totPayAuto+totPayManual;
   const closing=totalRec-totalPay;
 
@@ -1311,8 +1605,8 @@ function renderF01(){
 
   /* Receipt rows */
   let recRows='';
-  if(!ar.length&&!f01ManualRec.length){
-    recRows=`<tr><td colspan="6" style="text-align:center;padding:1rem;color:#8babc8;font-size:.72rem">No approved income entries. Submit Form 02 entries and Admin must approve them.</td></tr>`;
+  if(!ar.length&&!manRec.length){
+    recRows=`<tr><td colspan="6" style="text-align:center;padding:1rem;color:#8babc8;font-size:.72rem">No approved income entries for FY ${fy.fullLabel}. Submit Form 02 entries and Admin must approve them.</td></tr>`;
   } else {
     recRows+=ar.map((r,idx)=>`<tr>
       <td class="cb-auto-cell" data-ce-auto="f02|${r.entryId}|date">${r.date||'—'}</td>
@@ -1321,7 +1615,7 @@ function renderF01(){
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td style="width:22px">${isAdmin?`<button class="cb-del-btn" title="Admin: Remove this entry" onclick="delAutoRec(${idx})">✕</button>`:''}</td></tr>`).join('');
-    recRows+=f01ManualRec.map(r=>`<tr style="background:#f0f8ff">
+    recRows+=manRec.map(r=>`<tr style="background:#f0f8ff">
       <td>${cbI(r.id,'date',r.date,'date','',false)}</td>
       <td>${cbI(r.id,'desc',r.desc,'text','Description...',false)}</td>
       <td>${cbI(r.id,'cash',r.cash,'number','0',false)}</td>
@@ -1332,8 +1626,8 @@ function renderF01(){
 
   /* Payment rows */
   let payRows='';
-  if(!ap.length&&!f01ManualPay.length){
-    payRows=`<tr><td colspan="9" style="text-align:center;padding:1rem;color:#8babc8;font-size:.72rem">No approved expenditure entries. Submit Form 03 entries and Admin must approve them.</td></tr>`;
+  if(!ap.length&&!manPay.length){
+    payRows=`<tr><td colspan="9" style="text-align:center;padding:1rem;color:#8babc8;font-size:.72rem">No approved expenditure entries for FY ${fy.fullLabel}. Submit Form 03 entries and Admin must approve them.</td></tr>`;
   } else {
     payRows+=ap.map((p,idx)=>`<tr>
       <td class="cb-auto-cell" data-ce-auto="f03|${p.entryId}|date">${p.date||'—'}</td>
@@ -1345,7 +1639,7 @@ function renderF01(){
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td style="width:22px">${isAdmin?`<button class="cb-del-btn" title="Admin: Remove this entry" onclick="delAutoPay(${idx})">✕</button>`:''}</td></tr>`).join('');
-    payRows+=f01ManualPay.map(p=>`<tr style="background:#fff5f0">
+    payRows+=manPay.map(p=>`<tr style="background:#fff5f0">
       <td>${cbI(p.id,'date',p.date,'date','',true)}</td>
       <td>${cbI(p.id,'voucher',p.voucher,'text','V-001',true)}</td>
       <td>${cbI(p.id,'desc',p.desc,'text','Description...',true)}</td>
@@ -1360,11 +1654,11 @@ function renderF01(){
   ws.innerHTML=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.25rem">
       <div><div class="form-title">ഫോറം 01 — ക്യാഷ് ബുക്ക് <span style="font-size:.78rem;font-weight:400">(Cash Book)</span></div>
-      <div style="font-size:.62rem;color:#8babc8;margin-top:1px">Approved entries from Forms 02 &amp; 03 · Manual rows supported</div></div>
-      <span class="status-pill pill-pass">Live</span></div>
+      <div style="font-size:.62rem;color:#8babc8;margin-top:1px">FY ${fy.fullLabel} · Approved entries from Forms 02 &amp; 03 · Manual rows supported</div></div>
+      <span class="status-pill pill-pass">Live · FY ${fy.label}</span></div>
     ${adminReviewHtml}
     <div class="ob-strip" style="margin-top:.6rem">
-      <label style="font-size:.75rem;color:#5a7ba8;white-space:nowrap;font-family:'Public Sans',sans-serif">ആരംഭ ബാക്കി / Opening Balance:</label>
+      <label style="font-size:.75rem;color:#5a7ba8;white-space:nowrap;font-family:'Public Sans',sans-serif">ആരംഭ ബാക്കി / Opening Balance (FY ${fy.fullLabel}):</label>
       <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
         <div><div style="font-size:.6rem;color:#8babc8;margin-bottom:2px">Cash (₹)</div><input class="ob-input" type="number" min="0" step="0.01" value="${ob0.toFixed(2)}" oninput="onObChange('OB',this.value)" placeholder="0.00"></div>
         <div><div style="font-size:.6rem;color:#8babc8;margin-bottom:2px">Treasury (₹)</div><input class="ob-input" type="number" min="0" step="0.01" value="${obT.toFixed(2)}" oninput="onObChange('OB_TREA',this.value)" placeholder="0.00"></div>
@@ -1372,7 +1666,7 @@ function renderF01(){
       </div></div>
     <div class="cb-wrap">
       <div class="cb-panel">
-        <div class="cb-panel-hdr cb-receipt-hdr"><span>▲ വരവ് — Receipts</span><span class="cb-panel-sub">${ar.length} auto + ${f01ManualRec.length} manual</span></div>
+        <div class="cb-panel-hdr cb-receipt-hdr"><span>▲ വരവ് — Receipts</span><span class="cb-panel-sub">${ar.length} auto + ${manRec.length} manual</span></div>
         <div class="cb-tbl-scroll"><table class="cb-table cb-receipt-table">
           <thead><tr class="cb-receipt-thead">
             <th style="min-width:98px;text-align:left">തിയതി</th><th style="min-width:135px;text-align:left">വിവരണം</th>
@@ -1385,7 +1679,7 @@ function renderF01(){
         <div class="cb-add-row-strip"><button class="cb-add-btn" onclick="addF01ManualRec()">+ Manual Receipt</button></div>
       </div>
       <div class="cb-panel">
-        <div class="cb-panel-hdr cb-payment-hdr"><span>▼ ചെലവ് — Payments</span><span class="cb-panel-sub">${ap.length} auto + ${f01ManualPay.length} manual</span></div>
+        <div class="cb-panel-hdr cb-payment-hdr"><span>▼ ചെലവ് — Payments</span><span class="cb-panel-sub">${ap.length} auto + ${manPay.length} manual</span></div>
         <div class="cb-tbl-scroll"><table class="cb-table cb-payment-table">
           <thead><tr class="cb-payment-thead">
             <th style="min-width:98px;text-align:left">തിയതി</th><th style="min-width:68px;text-align:left">വൗച്ചർ</th>
@@ -1406,7 +1700,7 @@ function renderF01(){
       <div class="cb-summary-box cb-sum-balance"><div class="cb-sum-lbl" style="color:#0040a1">Closing Balance</div><div class="cb-sum-val" style="color:${closing<0?'#a32d2d':'#0040a1'}">${fmtSigned(closing)}</div></div>
     </div>
     <div class="cb-closing-bar" id="cb-closing-bar" style="background:${closing<0?'#6b1a1a':'#0040a1'};margin-top:.6rem">
-      <div><div style="color:#a8c9ff;font-size:.75rem;font-family:'Public Sans',sans-serif">അന്തിമ ബാക്കി — Closing Balance</div>
+      <div><div style="color:#a8c9ff;font-size:.75rem;font-family:'Public Sans',sans-serif">അന്തിമ ബാക്കി — Closing Balance <span style="font-size:.6rem;opacity:.75">(FY ${fy.fullLabel})</span></div>
       <div style="color:#c8e0ff;font-size:.62rem;margin-top:2px">Total Receipts − Total Payments</div></div>
       <span id="cb-closing" style="color:#fff;font-size:1.15rem;font-weight:700;font-family:'Public Sans',sans-serif">${fmtSigned(closing)}</span>
     </div>
@@ -1665,9 +1959,8 @@ function deleteUser(uid){
    FINAL REPORT — AUDITED FINANCIAL STATEMENT
 ══════════════════════════════════════════════════════ */
 function aggregateF01(){
-  const ob0=parseFloat(lsGet(LS.OB,0))||0;
-  const obT=parseFloat(lsGet(LS.OB_TREA,0))||0;
-  const obB=parseFloat(lsGet(LS.OB_BANK,0))||0;
+  const fy=getFinancialYear();
+  const ob0=getOB(), obT=getOBT(), obB=getOBB();
   const recMap={}, payMap={};
   if(ob0||obT||obB) recMap['ആരംഭ ബാക്കി (Opening Balance)']={cash:ob0,treasury:obT,bank:obB};
   buildAutoReceipts().forEach(r=>{
@@ -1675,7 +1968,7 @@ function aggregateF01(){
     if(!recMap[k]) recMap[k]={cash:0,treasury:0,bank:0};
     recMap[k].cash+=r.cash||0;
   });
-  f01ManualRec.forEach(r=>{
+  f01ManualRec.filter(r=>dateInFY(r.date,fy)).forEach(r=>{
     const k=r.desc||'Manual Receipt';
     if(!recMap[k]) recMap[k]={cash:0,treasury:0,bank:0};
     recMap[k].cash+=parseFloat(r.cash)||0; recMap[k].treasury+=parseFloat(r.treasury)||0; recMap[k].bank+=parseFloat(r.bank)||0;
@@ -1685,7 +1978,7 @@ function aggregateF01(){
     if(!payMap[k]) payMap[k]={cash:0,treasury:0,bank:0};
     payMap[k].cash+=p.cash||0;
   });
-  f01ManualPay.forEach(p=>{
+  f01ManualPay.filter(p=>dateInFY(p.date,fy)).forEach(p=>{
     const k=p.desc||'Manual Payment';
     if(!payMap[k]) payMap[k]={cash:0,treasury:0,bank:0};
     payMap[k].cash+=parseFloat(p.cash)||0; payMap[k].treasury+=parseFloat(p.treasury)||0; payMap[k].bank+=parseFloat(p.bank)||0;
@@ -1697,7 +1990,11 @@ function renderFinal(){
   const ws=document.getElementById('workspace');
   const fy=getFinancialYear();
   const now=new Date();
-  const dateStr=now.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  /* Date formatted as dd/mm/yyyy per print requirements */
+  const dd=String(now.getDate()).padStart(2,'0');
+  const mm=String(now.getMonth()+1).padStart(2,'0');
+  const yyyy=now.getFullYear();
+  const dateStr=`${dd}/${mm}/${yyyy}`;
   const {recMap,payMap}=aggregateF01();
   const recKeys=Object.keys(recMap), payKeys=Object.keys(payMap);
   const maxRows=Math.max(recKeys.length,payKeys.length,1);
@@ -1785,12 +2082,12 @@ function renderFinal(){
       </div>
       ${adminEditBanner}
       <div class="rpt-title-block">
-        <div class="rpt-title-main">Audited Financial Statement for the Year ${fy.label}</div>
+        <div class="rpt-title-main">Audited Financial Statement for the Year ${fy.fullLabel}</div>
         <div class="rpt-title-fy">Financial Year: 1 April ${fy.start} – 31 March ${fy.end} &nbsp;·&nbsp; All amounts in ₹ (INR)</div>
       </div>
       <div class="rpt-meta-row">
         <span>Generated: ${dateStr}</span>
-        <span>Prepared by: <strong>${org.adminName||'—'}</strong> (${org.designation||''})</span>
+        <span> <strong>${org.adminName||'—'}</strong> (${org.designation||''})</span>
         <span>PEN: <strong>${org.pen||'—'}</strong></span>
         <span class="status-pill ${closing>=0?'pill-pass':'pill-rejected'}">${closing>=0?'Surplus':'Deficit'}: ${a(Math.abs(closing))}</span>
       </div>
@@ -1842,11 +2139,7 @@ function renderFinal(){
         <div class="rpt-summary-box"><div class="rpt-summary-lbl">Bank Balance</div><div class="rpt-summary-val" style="color:${closB<0?'#a32d2d':'#0040a1'}">${a(closB)}</div></div>
         <div class="rpt-summary-box" style="background:#e0eeff"><div class="rpt-summary-lbl">Closing Balance</div><div class="rpt-summary-val" style="color:${closing<0?'#a32d2d':'#0040a1'};font-size:1rem">${a(closing)}</div></div>
       </div>
-      <div class="rpt-sig-row">
-        <div class="rpt-sig-box">Prepared by<br><strong>${org.adminName||'_______________'}</strong><br>${org.designation||''}<br>PEN: ${org.pen||'—'}</div>
-        <div class="rpt-sig-box">Verified by<br><br><br>Date: ___________</div>
-        <div class="rpt-sig-box">Auditor's Signature<br><br><br>Date: ___________</div>
-      </div>
+
       <div class="action-row no-print" style="margin-top:1rem">
         ${isAdmin?`
         <button class="btn-primary" onclick="saveFinalOverrides()" style="background:#0a5c3a">💾 Save Final Statement</button>
@@ -1855,6 +2148,13 @@ function renderFinal(){
         <button class="btn-primary" onclick="openPortraitFinal()" style="background:#2c2c6c">📄 Kerala Format Print</button>
         <button class="btn-danger" onclick="clearAllData()">⚠ Clear All Data</button>
       </div>
+
+      <div class="rpt-sig-row">
+        <div class="rpt-sig-box"><br><br><br></div>
+        <div class="rpt-sig-box"><br><br><br></div>
+        <div class="rpt-sig-box"><br><strong>${org.adminName||''}</strong><br>${org.designation||''}<br>PEN: ${org.pen||'—'}</div>
+      </div>
+      
     </div>`;
 }
 
@@ -1908,7 +2208,7 @@ function renderPrintReports(){
   const CY  = now.getFullYear();
 
   /* Build year options: 4 years back to 2 ahead */
-  const yearRange = Array.from({length:7}, (_,i) => CY - 4 + i);
+  const yearRange = Array.from({length:20}, (_,i) => CY - 2 + i);
   const monthNames = ['January','February','March','April','May','June',
                       'July','August','September','October','November','December'];
 
@@ -2124,9 +2424,9 @@ function runPrintSearch(){
   /* ── FORM 01 — Cash Book ── */
   let f01Sect = '', f01HasData = false;
   if(incF01){
-    const ob0 = parseFloat(lsGet(LS.OB,0))||0;
-    const obT = parseFloat(lsGet(LS.OB_TREA,0))||0;
-    const obB = parseFloat(lsGet(LS.OB_BANK,0))||0;
+    const ob0 = getOB();
+    const obT = getOBT();
+    const obB = getOBB();
     const ar  = buildAutoReceipts().filter(r=>dateMatches(r.date));
     const ap  = buildAutoPayments().filter(p=>dateMatches(p.date));
     const mr  = f01ManualRec.filter(r=>dateMatches(r.date));
@@ -2185,7 +2485,7 @@ function runPrintSearch(){
   /* ── Org print header (hidden on screen, visible in print) ── */
   const orgHdr = `<div class="pr-org-print-hdr">
     <h2>${org.name||'HMC'}</h2>
-    <p>Audit Report — ${dateLabel} &nbsp;|&nbsp; Prepared by ${org.adminName||'—'} (${org.designation||''}) &nbsp;|&nbsp; PEN: ${org.pen||'—'}</p>
+    <p>Audit Report — ${dateLabel} &nbsp;|&nbsp;  ${org.adminName||'—'} (${org.designation||''}) &nbsp;|&nbsp; PEN: ${org.pen||'—'}</p>
   </div>`;
 
   /* ── Date banner (screen only) ── */
@@ -2218,8 +2518,8 @@ function runPrintSearch(){
 
   /* Signature block */
   const sigBlock = `<div class="pr-sig-print" style="display:none">
-    <div style="border-top:1px solid #888;padding-top:.35rem;font-size:.68rem;color:#555;text-align:center">Prepared by<br><strong>${org.adminName||'___'}</strong><br>${org.designation||''}</div>
-    <div style="border-top:1px solid #888;padding-top:.35rem;font-size:.68rem;color:#555;text-align:center">Verified by<br><br>Date: ___________</div>
+    <div style="border-top:1px solid #888;padding-top:.35rem;font-size:.68rem;color:#555;text-align:center"><br><strong>${org.adminName||'___'}</strong><br>${org.designation||''}</div>
+    <div style="border-top:1px solid #888;padding-top:.35rem;font-size:.68rem;color:#555;text-align:center"><br><br>Date:</div>
     <div style="border-top:1px solid #888;padding-top:.35rem;font-size:.68rem;color:#555;text-align:center">Auditor<br><br>PEN: ${org.pen||'—'}</div>
   </div>`;
 
@@ -2454,21 +2754,54 @@ function applyAdminEdit(){
 function _doPrint(cls){
   document.body.classList.remove('print-portrait','print-landscape');
   document.body.classList.add(cls);
+  /* Set document title to 'HMC fintrac - Report' to avoid 'about:blank' in print header */
+  const prevTitle = document.title;
+  document.title = 'HMC fintrac - Report';
+  /* Show custom print footer */
+  let pf = document.getElementById('hmc-print-footer');
+  if(!pf){
+    pf = document.createElement('div');
+    pf.id = 'hmc-print-footer';
+    pf.textContent = 'HMC fintrac - Audit Report';
+    document.body.appendChild(pf);
+  }
   window.print();
-  /* Remove class after browser print dialog completes */
-  setTimeout(()=>document.body.classList.remove(cls),1000);
+  /* Restore title and remove print class after dialog closes */
+  setTimeout(()=>{
+    document.title = prevTitle;
+    document.body.classList.remove(cls);
+  },1000);
 }
 function printFinal(){ _doPrint('print-portrait'); }
 function printForm(){  _doPrint('print-landscape'); }
 
 function openPortraitFinal(){
-  /* Ensure calculations are current — same as Final Report tab */
+  /* Step 1: Ensure all totals are current before reading any values */
   refreshF01Totals();
-  /* Build Kerala-format report in a dedicated print window */
+
+  /* Step 2: Build the Kerala-format HTML content */
   const html = buildFinalPortraitHTML('');
-  const win  = window.open('','_blank','width=794,height=1123');
-  win.document.write(`<!DOCTYPE html><html lang="ml"><head>
+
+  /* Step 3: Remove any leftover iframe from a previous print call */
+  const existing = document.getElementById('hmc-print-iframe');
+  if (existing) existing.remove();
+
+  /* Step 4: Create a hidden iframe — no popup window, no about:blank flash */
+  const iframe = document.createElement('iframe');
+  iframe.id = 'hmc-print-iframe';
+  iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:none;visibility:hidden;';
+  document.body.appendChild(iframe);
+
+  /* Step 5: Write the complete A4-portrait document into the iframe.
+     All CSS and Malayalam fonts are self-contained here.
+     NO window.onload / window.print inside — parent triggers it below. */
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html>
+<html lang="ml">
+<head>
   <meta charset="UTF-8">
+  <title>HMC fintrac - Report</title>
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Noto+Sans+Malayalam:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -2486,14 +2819,29 @@ function openPortraitFinal(){
     .pr-final-p-org{text-align:center;font-size:11pt;font-weight:600;margin-bottom:.2rem}
     .pr-final-p-title{text-align:center;font-size:12pt;font-weight:700;border-bottom:2pt solid #333;padding-bottom:4pt;margin-bottom:4pt}
     .pr-final-p-sub{text-align:center;font-size:8pt;color:#555;margin-bottom:10pt}
-    @page{size:A4 portrait;margin:1cm 1.4cm}
-    @media print{body{padding:0}}
+    .print-footer{width:100%;text-align:center;font-size:8pt;color:#888;margin-top:1.5rem}
+    @page{size:A4 portrait;margin:10mm}
+    @media print{
+      body{padding:0}
+      .print-footer{position:fixed;bottom:0;left:0;width:100%}
+    }
   </style>
-  </head><body>
+</head>
+<body>
   ${html}
-  <script>window.onload=()=>{window.print();}<\/script>
-  </body></html>`);
-  win.document.close();
+  <div class="print-footer">sumteck.in</div>
+</body>
+</html>`);
+  doc.close();
+
+  /* Step 6: Wait for fonts/layout to settle, then fire exactly one print()
+     on the iframe's window. Remove the iframe after the dialog closes.   */
+  setTimeout(() => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    /* Clean up — remove iframe 2 s after print dialog is invoked */
+    setTimeout(() => { iframe.remove(); }, 2000);
+  }, 400);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2502,6 +2850,8 @@ function openPortraitFinal(){
    so all figures are guaranteed to be identical.
    Key principle: call aggregateF01() once, derive every
    number from its output — no secondary recalculation.
+   Left (വരവ്) and Right (ചെലവ്) are built as independent
+   arrays and zipped — no phantom empty rows.
 ══════════════════════════════════════════════════════ */
 function buildFinalPortraitHTML(dateLabel){
   const fmtA=n=>n===0?'—':'₹'+Math.abs(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -2516,124 +2866,145 @@ function buildFinalPortraitHTML(dateLabel){
   const totRC=recKeys.reduce((s,k)=>s+recMap[k].cash,0);
   const totRT=recKeys.reduce((s,k)=>s+recMap[k].treasury,0);
   const totRB=recKeys.reduce((s,k)=>s+recMap[k].bank,0);
-  const totRec=totRC+totRT+totRB;          /* = ആകെ വരവ് in Final Report */
+  const totRec=totRC+totRT+totRB;
 
   const totPC=payKeys.reduce((s,k)=>s+payMap[k].cash,0);
   const totPT=payKeys.reduce((s,k)=>s+payMap[k].treasury,0);
   const totPB=payKeys.reduce((s,k)=>s+payMap[k].bank,0);
-  const totPay=totPC+totPT+totPB;          /* = ആകെ ചെലവ് in Final Report */
+  const totPay=totPC+totPT+totPB;
 
-  /* ── Step 3: closing balances — same formula as renderFinal() ── */
-  const closC=totRC-totPC;  /* Cash Balance   — matches Final Report */
-  const closT=totRT-totPT;  /* Treasury Balance */
-  const closB=totRB-totPB;  /* Bank Balance    — matches Final Report */
-  const closing=closC+closT+closB;         /* = Closing Balance in Final Report */
+  /* ── Step 3: closing balances ── */
+  const closC=totRC-totPC;
+  const closT=totRT-totPT;
+  const closB=totRB-totPB;
+  const closing=closC+closT+closB;
 
-  /* ── Step 4: Opening Balance (already inside recMap, shown separately) ── */
+  /* ── Step 4: Opening Balance entry ── */
   const OB_KEY='ആരംഭ ബാക്കി (Opening Balance)';
   const obEntry=recMap[OB_KEY];
-  const obTotal=obEntry?(obEntry.cash+obEntry.treasury+obEntry.bank):0;
 
-  /* ── Step 5: Build income rows (exclude OB — shown separately) ── */
-  const incRows=recKeys
-    .filter(k=>k!==OB_KEY)
-    .map(k=>({label:k, amt:recMap[k].cash+recMap[k].treasury+recMap[k].bank}))
-    .filter(r=>r.amt!==0);
+  /* ── Step 5: Build LEFT side (വരവ്) independently ──
+     Opening balance is split into sub-rows (Cash/Treasury/Bank).
+     Then സാധാരണം header, then each income category.            */
+  const leftSide=[];
 
-  /* ── Step 6: Build expenditure rows ── */
-  const expRows=payKeys
-    .map(k=>({label:k, amt:payMap[k].cash+payMap[k].treasury+payMap[k].bank}))
-    .filter(r=>r.amt!==0);
+  if(obEntry){
+    /* "മുന്നിരുപ്പ്" heading — bold, underlined */
+    leftSide.push({lbl:'മുന്നിരുപ്പ്', amt:'', style:'font-weight:700;text-decoration:underline', hdr:false});
+    if(obEntry.cash)
+      leftSide.push({lbl:'പണം (Cash)',      amt:fmtA(obEntry.cash),     style:'padding-left:1.2rem;font-style:italic;color:#444'});
+    if(obEntry.treasury)
+      leftSide.push({lbl:'ട്രഷറി (Treasury)',amt:fmtA(obEntry.treasury),style:'padding-left:1.2rem;font-style:italic;color:#444'});
+    if(obEntry.bank)
+      leftSide.push({lbl:'ബാങ്ക് (Bank)',   amt:fmtA(obEntry.bank),     style:'padding-left:1.2rem;font-style:italic;color:#444'});
+  }
 
-  /* Pad to equal length */
-  const maxR=Math.max(incRows.length,expRows.length,1);
-  const incPad=[...incRows,...Array(Math.max(0,maxR-incRows.length)).fill({label:'',amt:0})];
-  const expPad=[...expRows,...Array(Math.max(0,maxR-expRows.length)).fill({label:'',amt:0})];
+  /* സാധാരണം section header */
+  leftSide.push({lbl:'സാധാരണം', amt:'', style:'', hdr:true});
 
-  /* Build body rows */
-  const bodyRows=incPad.map((r,i)=>{
-    const e=expPad[i];
-    return `<tr>
-      <td class="pr-fpt-lbl">${r.label||''}</td>
-      <td class="pr-fpt-amt">${r.amt?fmtA(r.amt):''}</td>
-      <td class="pr-fpt-lbl">${e.label||''}</td>
-      <td class="pr-fpt-amt">${e.amt?fmtA(e.amt):''}</td>
-    </tr>`;
+  /* Income rows (exclude the OB key itself) */
+  recKeys.filter(k=>k!==OB_KEY).forEach(k=>{
+    const v=recMap[k], total=v.cash+v.treasury+v.bank;
+    if(total!==0) leftSide.push({lbl:k, amt:fmtA(total), style:''});
+  });
+
+  /* ── Step 6: Build RIGHT side (ചെലവ്) independently ──
+     Starts immediately with സാധാരണം, then each expense row.
+     No padding/blank rows to match the left side.             */
+  const rightSide=[];
+
+  /* സാധാരണം section header */
+  rightSide.push({lbl:'സാധാരണം', amt:'', style:'', hdr:true});
+
+  /* Expenditure rows */
+  payKeys.forEach(k=>{
+    const v=payMap[k], total=v.cash+v.treasury+v.bank;
+    if(total!==0) rightSide.push({lbl:k, amt:fmtA(total), style:''});
+  });
+
+  /* ── Step 7: Zip both independent arrays into <tr> rows ──
+     Each side advances through its own array independently;
+     once a side is exhausted the cells are empty — no phantom
+     blank rows are inserted to "align" with the other side.   */
+  const maxRows=Math.max(leftSide.length, rightSide.length);
+  const empty={lbl:'', amt:'', style:'', hdr:false};
+
+  const bodyRows=Array.from({length:maxRows},(_,i)=>{
+    const l=leftSide[i]  || empty;
+    const r=rightSide[i] || empty;
+
+    const lCell = l.hdr
+      ? `<td colspan="2" style="background:#fff;text-align:center;font-weight:bold;font-family:'Noto Sans Malayalam','Public Sans',sans-serif">${l.lbl}</td>`
+      : `<td class="pr-fpt-lbl" style="${l.style}">${l.lbl}</td><td class="pr-fpt-amt">${l.amt}</td>`;
+
+    const rCell = r.hdr
+      ? `<td colspan="2" style="background:#fff;text-align:center;font-weight:bold;font-family:'Noto Sans Malayalam','Public Sans',sans-serif">${r.lbl}</td>`
+      : `<td class="pr-fpt-lbl" style="${r.style}">${r.lbl}</td><td class="pr-fpt-amt">${r.amt}</td>`;
+
+    return `<tr>${lCell}${rCell}</tr>`;
   }).join('');
 
   return `<div class="pr-final-portrait-wrap">
     <div class="pr-final-p-org">${org.name||'HMC'}</div>
-    <div class="pr-final-p-title">${fy.start}-${String(fy.end).slice(-2)} വർഷത്തെ വരവ്‌ ചെലവ് കണക്ക്</div>
-    <div class="pr-final-p-sub">${dateLabel||'Financial Year: Apr '+fy.start+' – Mar '+fy.end}</div>
+    <div class="pr-final-p-title">${fy.start}-${fy.end} വർഷത്തെ വരവ്‌ ചെലവ് കണക്ക്</div>
+    <div class="pr-final-p-sub"></div>
 
     <table class="pr-final-portrait-tbl">
       <thead>
         <tr>
-          <th colspan="2" class="pr-fpt-side-hdr" style="width:50%">വരവ് (Receipts)</th>
-          <th colspan="2" class="pr-fpt-side-hdr" style="width:50%">ചെലവ് (Expenditure)</th>
+          <th colspan="2" style="width:50%;background-color:#ADD8E6;color:#000;font-weight:bold;font-size:1rem">വരവ്</th>
+          <th colspan="2" style="width:50%;background-color:#ADD8E6;color:#000;font-weight:bold;font-size:1rem">ചെലവ്</th>
         </tr>
         <tr>
-          <th style="width:34%;text-align:left;padding-left:.6rem">ഇനം (Particulars)</th>
-          <th style="width:16%;text-align:right">തുക (₹)</th>
-          <th style="width:34%;text-align:left;padding-left:.6rem">ഇനം (Particulars)</th>
-          <th style="width:16%;text-align:right">തുക (₹)</th>
+          <th style="width:34%;text-align:center;padding-left:.6rem;background:#fff;color:#000;font-weight:bold;font-size:.8rem">ഇനം</th>
+          <th style="width:16%;text-align:right;background:#fff;color:#000">തുക (₹)</th>
+          <th style="width:34%;text-align:center;padding-left:.6rem;background:#fff;color:#000;font-weight:bold;font-size:.8rem">ഇനം</th>
+          <th style="width:16%;text-align:right;background:#fff;color:#000">തുക (₹)</th>
         </tr>
       </thead>
       <tbody>
-        <!-- Opening Balance (മുന്നിരുപ്പ്) — from recMap, same as Final Report -->
-        ${obTotal?`<tr>
-          <td class="pr-fpt-lbl" style="font-style:italic;color:#444">മുന്നിരുപ്പ് (Opening Balance)</td>
-          <td class="pr-fpt-amt">${fmtA(obTotal)}</td>
-          <td class="pr-fpt-lbl"></td><td></td>
-        </tr>`:''}
-
-        <!-- Section header: സാധാരണം -->
-        <tr>
-          <td colspan="2" class="pr-fpt-section-hdr">സാധാരണം (Ordinary)</td>
-          <td colspan="2" class="pr-fpt-section-hdr">സാധാരണം (Ordinary)</td>
-        </tr>
-
-        <!-- Data rows — sourced directly from recMap / payMap, same as renderFinal() -->
         ${bodyRows}
 
-        <!-- Grand Total — totRec matches ആകെ വരവ് in Final Report tab -->
+        <!-- Grand Total row -->
         <tr class="pr-fpt-total">
-          <td class="pr-fpt-lbl" style="font-weight:700">ആകെ (Grand Total)</td>
+          <td class="pr-fpt-lbl" style="font-weight:700">ആകെ വരവ്</td>
           <td class="pr-fpt-amt">${fmtA(totRec)}</td>
-          <td class="pr-fpt-lbl" style="font-weight:700">ആകെ (Grand Total)</td>
+          <td class="pr-fpt-lbl" style="font-weight:700">ആകെ ചെലവ്</td>
           <td class="pr-fpt-amt">${fmtA(totPay)}</td>
         </tr>
 
         <!-- Closing Balance row (നീക്കിയിരുപ്പ്) -->
         <tr class="pr-fpt-closing">
           <td colspan="2" style="padding:.2rem .55rem"></td>
-          <td class="pr-fpt-lbl" style="font-weight:700;color:#1a3d0f">നീക്കിയിരുപ്പ് (Closing Balance)</td>
-          <td class="pr-fpt-amt" style="color:#1a3d0f;font-weight:700">${fmtA(Math.abs(closing))}</td>
+          <td class="pr-fpt-lbl" style="font-weight:700;color:#000">നീക്കിയിരുപ്പ്</td>
+          <td class="pr-fpt-amt" style="color:#000;font-weight:700">${fmtA(Math.abs(closing))}</td>
         </tr>
 
-        <!-- Cash / Bank breakdown:
-             closC = Cash Balance from Final Report summary box
-             closB = Bank Balance from Final Report summary box -->
+        <!-- Cash / Treasury / Bank closing breakdown -->
         <tr class="pr-fpt-cash-bank">
           <td colspan="2"></td>
           <td class="pr-fpt-lbl" colspan="2">
-            <span style="display:inline-block;width:48%;vertical-align:top">
-              <strong>പണം (Cash):</strong><br>
+            <span style="display:inline-block;width:32%;vertical-align:top">
+              <strong>പണം:</strong><br>
               <span style="font-size:.88rem;font-weight:700">${fmtA(Math.abs(closC))}</span>
             </span>
-            <span style="display:inline-block;width:48%;vertical-align:top">
-              <strong>ബാങ്ക് (Bank):</strong><br>
+            <span style="display:inline-block;width:32%;vertical-align:top">
+              <strong>ട്രഷറി:</strong><br>
+              <span style="font-size:.88rem;font-weight:700">${fmtA(Math.abs(closT))}</span>
+            </span>
+            <span style="display:inline-block;width:32%;vertical-align:top">
+              <strong>ബാങ്ക്:</strong><br>
               <span style="font-size:.88rem;font-weight:700">${fmtA(Math.abs(closB))}</span>
             </span>
           </td>
         </tr>
 
-        <!-- Balance-check footer: Receipt Total = Payment + Balance -->
-        <tr style="background:#f0f0f0">
-          <td class="pr-fpt-lbl" colspan="2" style="color:#444;font-size:.68rem;text-align:right;font-style:italic">
+        <!-- Balance-check footer -->
+        <tr style="background:#fff">
+          <td class="pr-fpt-lbl" colspan="2" style="color:#000;font-size:.88rem;text-align:right;font-style:italic">
             ആകെ വരവ് = ${fmtA(totRec)}
           </td>
-          <td class="pr-fpt-lbl" colspan="2" style="color:#444;font-size:.68rem;text-align:right;font-style:italic">
+          <td class="pr-fpt-lbl" colspan="2" style="color:#000;font-size:.88rem;text-align:right;font-style:italic">
             ചെലവ് + ബാക്കി = ${fmtA(totPay+Math.abs(closing))}
           </td>
         </tr>
@@ -2642,15 +3013,9 @@ function buildFinalPortraitHTML(dateLabel){
 
     <!-- Signature row -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;margin-top:1.5rem;padding-top:.85rem">
-      <div style="border-top:1px solid #555;padding-top:.38rem;font-size:.68rem;color:#555;text-align:center;font-family:'Public Sans',sans-serif">
-        തയ്യാറാക്കിയത്<br><strong>${org.adminName||'_______________'}</strong><br>${org.designation||''}<br>PEN: ${org.pen||'—'}
-      </div>
-      <div style="border-top:1px solid #555;padding-top:.38rem;font-size:.68rem;color:#555;text-align:center;font-family:'Public Sans',sans-serif">
-        പരിശോധിച്ചത്<br><br><br>തീയതി: ___________
-      </div>
-      <div style="border-top:1px solid #555;padding-top:.38rem;font-size:.68rem;color:#555;text-align:center;font-family:'Public Sans',sans-serif">
-        ഓഡിറ്ററുടെ ഒപ്പ്<br><br><br>തീയതി: ___________
-      </div>
+      <div><br><br><br></div>
+      <div><br><br><br></div>
+      <div><br><strong>${org.adminName||'_______________'}</strong><br>${org.designation||''}<br>PEN: ${org.pen||'—'}</div>
     </div>
   </div>`;
 }
@@ -2660,6 +3025,7 @@ function buildFinalPortraitHTML(dateLabel){
 ══════════════════════════════════════════════════════ */
 applyOrgToUI();
 buildLoginChips();
+buildFYDropdown();   /* pre-populate dropdown even before login */
 // Select admin chip by default
 const firstChip=document.querySelector('.user-chip');
 if(firstChip){
