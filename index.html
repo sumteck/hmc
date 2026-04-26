@@ -18,9 +18,6 @@
 <!-- Mobile App Icon for iOS -->
 <link rel="apple-touch-icon" href="https://sumteck.github.io/hmc/logo512.png">
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Inter:wght@400;500&family=Noto+Sans+Malayalam:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -815,7 +812,7 @@ body{font-family:'Inter',sans-serif;background:#f3faff;min-height:100vh}
         <a class="support-link-card" href="https://www.rubundroid.com/" target="_blank" rel="noopener">
           <img class="support-link-img"
                src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjkvFhRAN7Tog81k1i-MQP1xBAcdppCMubjDuoAdijb22Vepen1Lku_rumgiOk8X0RGPL7HwXEpCFA2eAtzBSCMPxesaLGGUYXQ-I2Cb5DHs8yCxsFqinIhhD4bLkDgfeRF85ebTQYKyWZC8XEyejdiPAc8TU0SYFsBXlfBUmQBjUfWg9E6ffF1nSLndIQ/s74/Screenshot%202026-04-13%20213848.png"
-          <!-- ↑↑ REPLACE the src above with the actual Rubundroid image URL ↑↑ -->
+               alt="Rubundroid Blog">
           <div class="support-link-info">
             <span class="support-link-title">Rubundroid Blog</span>
             <span class="support-link-url">www.rubundroid.com</span>
@@ -832,7 +829,7 @@ body{font-family:'Inter',sans-serif;background:#f3faff;min-height:100vh}
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
   Download Help Guide PDF
 </a>
-<a class="support-pdf-btn" href="നിങ്ങളുടെ_പുതിയ_ഡ്രൈവ്_ലിങ്ക്_ഇവിടെ_നൽകുക" target="_blank" style="margin-top: 10px;">
+<a class="support-pdf-btn" href="#" target="_blank" style="margin-top: 10px;">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
   Download Second PDF Name
 </a>
@@ -882,6 +879,8 @@ const LS={
   F02:'hmc_f02_v5', F02_CUSTOM:'hmc_f02_custom_v2', F02_PENDING:'hmc_f02_pending_v1',
   F03:'hmc_f03_v4', F03_CUSTOM:'hmc_f03_custom_v2', F03_PENDING:'hmc_f03_pending_v1',
   F01_REC:'hmc_f01_rec_v2', F01_PAY:'hmc_f01_pay_v2',
+  F01_CONTRA:'hmc_f01_contra_v1',           /* ← NEW: contra (cash→bank) entries  */
+  /* CASH_IN_HAND removed — cash closing is now computed from column totals         */
   F04:'hmc_f04_v1',
   /* OB keys are now per-FY — use obKey() helpers below */
   OB:'hmc_ob_v2', OB_TREA:'hmc_ob_trea_v1', OB_BANK:'hmc_ob_bank_v1', /* legacy fallback */
@@ -1428,18 +1427,95 @@ function makeManualPay(){return {id:Date.now()+Math.random(),date:'',voucher:'',
 function manualRecTotal(r){return (parseFloat(r.cash)||0)+(parseFloat(r.treasury)||0)+(parseFloat(r.bank)||0);}
 function manualPayTotal(p){return (parseFloat(p.cash)||0)+(parseFloat(p.treasury)||0)+(parseFloat(p.bank)||0);}
 
+/* ── Contra entries: Cash deposited into Bank (contra-entry) ── */
+let f01ContraEntries = lsGet(LS.F01_CONTRA, []);
+function makeContra(){return {id:Date.now()+Math.random(), date:'', amount:''};}
+
+/* ══════════════════════════════════════════════════════
+   CENTRAL COLUMN-WISE TOTALS FOR FORM 01
+   Single source of truth used by refreshF01Totals(),
+   renderF01(), renderFinal(), and buildFinalPortraitHTML().
+   Contra entries: appear as Bank Receipt + Cash Payment
+   → shift balance from Cash to Bank, net total unchanged.
+══════════════════════════════════════════════════════ */
+function getF01ColumnTotals(){
+  const fy = getFinancialYear();
+  const ar = buildAutoReceipts();
+  const ap = buildAutoPayments();
+  const manRec = f01ManualRec.filter(r=>dateInFY(r.date,fy));
+  const manPay = f01ManualPay.filter(p=>dateInFY(p.date,fy));
+  const contraFY = f01ContraEntries.filter(c=>dateInFY(c.date,fy));
+  const sumContra = contraFY.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+
+  const ob0=getOB(), obT=getOBT(), obB=getOBB();
+
+  /* Receipt column sums (auto rows now have cash/treasury/bank fields) */
+  const arCash = ar.reduce((s,r)=>s+(r.cash||0),0);
+  const arTrea = ar.reduce((s,r)=>s+(r.treasury||0),0);
+  const arBank = ar.reduce((s,r)=>s+(r.bank||0),0);
+  const mrCash = manRec.reduce((s,r)=>s+(parseFloat(r.cash)||0),0);
+  const mrTrea = manRec.reduce((s,r)=>s+(parseFloat(r.treasury)||0),0);
+  const mrBank = manRec.reduce((s,r)=>s+(parseFloat(r.bank)||0),0);
+
+  /* Contra adds to Bank Receipts column */
+  const totRecCash = ob0 + arCash + mrCash;
+  const totRecTrea = obT + arTrea + mrTrea;
+  const totRecBank = obB + arBank + mrBank + sumContra;
+  const totRec     = totRecCash + totRecTrea + totRecBank;
+
+  /* Payment column sums */
+  const apCash = ap.reduce((s,p)=>s+(p.cash||0),0);
+  const apTrea = ap.reduce((s,p)=>s+(p.treasury||0),0);
+  const apBank = ap.reduce((s,p)=>s+(p.bank||0),0);
+  const mpCash = manPay.reduce((s,p)=>s+(parseFloat(p.cash)||0),0);
+  const mpTrea = manPay.reduce((s,p)=>s+(parseFloat(p.treasury)||0),0);
+  const mpBank = manPay.reduce((s,p)=>s+(parseFloat(p.bank)||0),0);
+
+  /* Contra adds to Cash Payments column */
+  const totPayCash = apCash + mpCash + sumContra;
+  const totPayTrea = apTrea + mpTrea;
+  const totPayBank = apBank + mpBank;
+  const totPay     = totPayCash + totPayTrea + totPayBank;
+
+  /* 3-column closing balances — computed purely from column arithmetic */
+  const closC = totRecCash - totPayCash;   /* ob.cash + cashRec − cashPay − contraAmt */
+  const closT = totRecTrea - totPayTrea;   /* ob.trea + treaRec − treaPay             */
+  const closB = totRecBank - totPayBank;   /* ob.bank + bankRec − bankPay + contraAmt */
+  const closing = closC + closT + closB;
+
+  return {totRec, totPay, closing, closC, closT, closB,
+          totRecCash, totRecTrea, totRecBank,
+          totPayCash, totPayTrea, totPayBank,
+          sumContra, contraFY, ar, ap, manRec, manPay};
+}
+
 function buildAutoReceipts(){
   const fy=getFinancialYear();
   const rows=[];
   const approved=f02Pending.filter(e=>e.status==='approved');
   approved.forEach(e=>{
-    if(!dateInFY(e.date,fy)) return;            /* ← FY filter */
+    if(!dateInFY(e.date,fy)) return;
     f02AllCols().forEach(c=>{
       const val=parseFloat(e[c.key])||0;
-      if(val) rows.push({date:e.date||'',desc:c.ml,cash:val,source:'F02',entryId:e.id,colKey:c.key});
+      if(!val) return;
+      /* REQ 2: 'interest' (പലിശ) is always credited to the BANK column.
+         All other F02 income defaults to the CASH column.               */
+      const toBank = (c.key==='interest');
+      rows.push({
+        date    : e.date||'',
+        desc    : c.ml,
+        cash    : toBank ? 0 : val,
+        treasury: 0,
+        bank    : toBank ? val : 0,
+        source  : 'F02',
+        entryId : e.id,
+        colKey  : c.key
+      });
     });
   });
-  return rows.filter(r=>!f01ExcludedRec.includes(r.date+'|'+r.desc+'|'+r.cash));
+  /* Exclusion key uses (cash+bank) since only one column is non-zero
+     per auto-receipt row — this keeps the key stable after routing.  */
+  return rows.filter(r=>!f01ExcludedRec.includes(r.date+'|'+r.desc+'|'+(r.cash+r.bank)));
 }
 function buildAutoPayments(){
   const fy=getFinancialYear();
@@ -1471,11 +1547,82 @@ function addF01ManualPay(){f01ManualPay.push(makeManualPay()); lsSet(LS.F01_PAY,
 function delF01ManualPay(id){f01ManualPay=f01ManualPay.filter(p=>p.id!==id); lsSet(LS.F01_PAY,f01ManualPay); renderF01(); _syncAll();}
 function onObChange(field,val){ saveOB(field, val); }
 
+/* ── Contra Entry helpers (Cash → Bank deposit) ─────────────────── */
+function addContraEntry(){
+  const d=document.getElementById('ctr-date').value;
+  const a=parseFloat(document.getElementById('ctr-amount').value)||0;
+  if(!d||!a){showToast('Date and amount are required.','#7a4800'); return;}
+  f01ContraEntries.push({id:Date.now()+Math.random(), date:d, amount:a});
+  lsSet(LS.F01_CONTRA, f01ContraEntries);
+  _syncAll(); openContraModal();
+}
+function delContraEntry(id){
+  f01ContraEntries=f01ContraEntries.filter(c=>c.id!==id);
+  lsSet(LS.F01_CONTRA, f01ContraEntries);
+  _syncAll(); openContraModal();
+}
+function openContraModal(){
+  let m=document.getElementById('contra-modal');
+  if(!m){
+    m=document.createElement('div');
+    m.id='contra-modal';
+    m.style.cssText='display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,30,70,.55);backdrop-filter:blur(3px);align-items:center;justify-content:center;padding:1rem';
+    m.onclick=function(e){if(e.target===m)m.style.display='none';};
+    document.body.appendChild(m);
+  }
+  const fy=getFinancialYear();
+  const entries=f01ContraEntries.filter(c=>dateInFY(c.date,fy));
+  const sumC=entries.reduce((s,c)=>s+(parseFloat(c.amount)||0),0);
+  m.innerHTML=`<div style="background:#fff;border-radius:16px;width:min(440px,96vw);max-height:85vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,30,100,.28)">
+    <div style="background:linear-gradient(135deg,#0040a1,#1a4fbb);border-radius:16px 16px 0 0;padding:.85rem 1.2rem;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:'Public Sans',sans-serif;font-size:.88rem;font-weight:700;color:#fff">🏦 ക്യാഷ് → ബാങ്ക് Contra Entry</span>
+      <button onclick="document.getElementById('contra-modal').style.display='none'" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:28px;height:28px;color:#fff;font-size:1rem;cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div style="padding:1rem 1.2rem">
+      <div style="font-size:.72rem;color:#5a7ba8;margin-bottom:.85rem;line-height:1.5;font-family:'Public Sans',sans-serif">
+        ക്യാഷ് ബാലൻസ് ബാങ്കിൽ ഡിപ്പോസിറ്റ് ചെയ്ത ഇടപാടുകൾ (FY <strong>${fy.fullLabel}</strong>).<br>
+        <span style="color:#0040a1">ഈ entry Cash balance കുറയ്ക്കുകയും Bank balance കൂട്ടുകയും ചെയ്യും — ആകെ total മാറില്ല.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;align-items:end;margin-bottom:.85rem">
+        <div>
+          <div style="font-size:.62rem;color:#5a7ba8;margin-bottom:3px;font-family:'Public Sans',sans-serif">Date</div>
+          <input id="ctr-date" type="date" class="ob-input" style="width:100%;font-size:.8rem">
+        </div>
+        <div>
+          <div style="font-size:.62rem;color:#5a7ba8;margin-bottom:3px;font-family:'Public Sans',sans-serif">Amount (₹)</div>
+          <input id="ctr-amount" type="number" min="0" step="0.01" placeholder="0.00" class="ob-input" style="width:100%;font-size:.8rem">
+        </div>
+        <button onclick="addContraEntry()" class="btn-primary" style="padding:.42rem .85rem;font-size:.75rem">+ Add</button>
+      </div>
+      ${entries.length?`
+      <table style="width:100%;border-collapse:collapse;font-size:.73rem;font-family:'Inter',sans-serif">
+        <thead><tr style="background:#e0eeff">
+          <th style="padding:.3rem .55rem;text-align:left;font-family:'Public Sans',sans-serif;color:#0040a1">Date</th>
+          <th style="padding:.3rem .55rem;text-align:right;font-family:'Public Sans',sans-serif;color:#0040a1">Amount</th>
+          <th style="width:28px"></th>
+        </tr></thead>
+        <tbody>${entries.map(c=>`<tr style="border-bottom:1px solid #edf4ff">
+          <td style="padding:.25rem .55rem">${c.date||'—'}</td>
+          <td style="padding:.25rem .55rem;text-align:right;font-weight:600;color:#0040a1">${fmt(parseFloat(c.amount)||0)}</td>
+          <td style="padding:.25rem .3rem"><button class="cb-del-btn" onclick="delContraEntry(${c.id})">✕</button></td>
+        </tr>`).join('')}
+        <tr style="background:#e0eeff">
+          <td style="padding:.35rem .55rem;font-weight:700;font-family:'Public Sans',sans-serif">ആകെ Contra</td>
+          <td style="padding:.35rem .55rem;text-align:right;font-weight:700;color:#0040a1">${fmt(sumC)}</td>
+          <td></td>
+        </tr></tbody>
+      </table>`:
+      `<div style="text-align:center;padding:1rem;color:#8babc8;font-size:.75rem;font-family:'Public Sans',sans-serif">FY ${fy.fullLabel}-ൽ ഇതുവരെ Contra entries ഇല്ല.</div>`}
+    </div>
+  </div>`;
+  m.style.display='flex';
+}
+
 /* Admin: exclude an auto-receipt row by index */
 function delAutoRec(idx){
   const ar=buildAutoReceipts();
   const r=ar[idx]; if(!r) return;
-  const key=r.date+'|'+r.desc+'|'+r.cash;
+  const key=r.date+'|'+r.desc+'|'+(r.cash+r.bank);
   if(!f01ExcludedRec.includes(key)) f01ExcludedRec.push(key);
   lsSet('hmc_f01_excl_rec_v1',f01ExcludedRec); renderF01(); _syncAll();
 }
@@ -1517,19 +1664,21 @@ function saveF01ManualEntries(){
 }
 
 function refreshF01Totals(){
-  const fy=getFinancialYear();
-  const ob0=getOB(), obT=getOBT(), obB=getOBB();
-  const ar=buildAutoReceipts(), ap=buildAutoPayments();
-  const manRec=f01ManualRec.filter(r=>dateInFY(r.date,fy));
-  const manPay=f01ManualPay.filter(p=>dateInFY(p.date,fy));
-  const totRec=(ob0+obT+obB)+ar.reduce((s,r)=>s+r.cash,0)+manRec.reduce((s,r)=>s+manualRecTotal(r),0);
-  const totPay=ap.reduce((s,p)=>s+p.cash,0)+manPay.reduce((s,p)=>s+manualPayTotal(p),0);
-  const closing=totRec-totPay;
-  const elTR=document.getElementById('cb-total-rec'),elTP=document.getElementById('cb-total-pay'),elCL=document.getElementById('cb-closing'),elBar=document.getElementById('cb-closing-bar');
-  if(elTR) elTR.textContent=fmt(totRec);
-  if(elTP) elTP.textContent=fmt(totPay);
-  if(elCL){elCL.textContent=fmtSigned(closing); elCL.style.color=closing<0?'#ffaaaa':'#fff';}
-  if(elBar) elBar.style.background=closing<0?'#6b1a1a':'#0040a1';
+  const {totRec, totPay, closing, closC, closT, closB} = getF01ColumnTotals();
+  const elTR  = document.getElementById('cb-total-rec');
+  const elTP  = document.getElementById('cb-total-pay');
+  const elCLC = document.getElementById('cb-closing-cash');
+  const elCLT = document.getElementById('cb-closing-trea');
+  const elCLB = document.getElementById('cb-closing-bank');
+  const elCL  = document.getElementById('cb-closing');
+  const elBar = document.getElementById('cb-closing-bar');
+  if(elTR)  elTR.textContent  = fmt(totRec);
+  if(elTP)  elTP.textContent  = fmt(totPay);
+  if(elCLC) elCLC.textContent = fmtSigned(closC);
+  if(elCLT) elCLT.textContent = fmtSigned(closT);
+  if(elCLB) elCLB.textContent = fmtSigned(closB);
+  if(elCL){ elCL.textContent = fmtSigned(closing); elCL.style.color = closing<0?'#ffaaaa':'#fff'; }
+  if(elBar) elBar.style.background = closing<0?'#6b1a1a':'#0040a1';
 }
 
 /* Admin approve/reject pending submissions */
@@ -1564,22 +1713,16 @@ function rejectF03Entry(id){
 }
 
 function renderF01(){
-  const ws=document.getElementById('workspace');
-  const fy=getFinancialYear();
-  const ob0=getOB(), obT=getOBT(), obB=getOBB();
-  const ar=buildAutoReceipts(), ap=buildAutoPayments();
-  /* Only show manual rows that belong to the selected FY */
-  const manRec=f01ManualRec.filter(r=>dateInFY(r.date,fy));
-  const manPay=f01ManualPay.filter(p=>dateInFY(p.date,fy));
-  const totRecAuto=ar.reduce((s,r)=>s+r.cash,0);
-  const totRecManual=manRec.reduce((s,r)=>s+manualRecTotal(r),0);
-  const totalRec=(ob0+obT+obB)+totRecAuto+totRecManual;
-  const totPayAuto=ap.reduce((s,p)=>s+p.cash,0);
-  const totPayManual=manPay.reduce((s,p)=>s+manualPayTotal(p),0);
-  const totalPay=totPayAuto+totPayManual;
-  const closing=totalRec-totalPay;
+  const ws  = document.getElementById('workspace');
+  const fy  = getFinancialYear();
 
-  /* Pending admin review */
+  /* Central column-wise totals — single source of truth */
+  const {
+    totRec, totPay, closing, closC, closT, closB,
+    sumContra, contraFY, ar, ap, manRec, manPay
+  } = getF01ColumnTotals();
+
+  /* ── Admin review panel ── */
   const p2=f02Pending.filter(e=>e.status==='pending');
   const p3=f03Pending.filter(e=>e.status==='pending');
   const adminReviewHtml=isAdmin&&(p2.length||p3.length)?`
@@ -1603,33 +1746,46 @@ function renderF01(){
           </div></div></div>`).join('')}
     </div>`:(!isAdmin&&(p2.length||p3.length)?`<div style="background:#faeeda;border-radius:8px;padding:.5rem .85rem;margin-bottom:.65rem;font-size:.75rem;color:#854f0b">⏳ ${p2.length+p3.length} submission(s) pending Admin approval. Approved items will appear in the Cash Book.</div>`:'');
 
-  /* Receipt rows */
+  /* ── Receipt rows ── */
   let recRows='';
-  if(!ar.length&&!manRec.length){
+  if(!ar.length && !manRec.length && !contraFY.length){
     recRows=`<tr><td colspan="6" style="text-align:center;padding:1rem;color:#8babc8;font-size:.72rem">No approved income entries for FY ${fy.fullLabel}. Submit Form 02 entries and Admin must approve them.</td></tr>`;
   } else {
-    recRows+=ar.map((r,idx)=>`<tr>
+    /* Auto-receipts from F02 — cash OR bank column depending on category */
+    recRows += ar.map((r,idx)=>`<tr>
       <td class="cb-auto-cell" data-ce-auto="f02|${r.entryId}|date">${r.date||'—'}</td>
       <td class="cb-auto-cell" data-ce-auto="f02|${r.entryId}|desc">${r.desc}<span class="cb-auto-badge">F02</span></td>
-      <td class="cb-amount-cell" data-ce-auto="f02|${r.entryId}|${r.colKey}">₹${r.cash.toFixed(2)}</td>
+      <td class="${r.cash>0?'cb-amount-cell':'cb-auto-cell'}" style="${r.cash>0?'':'text-align:right;color:#8babc8'}" data-ce-auto="f02|${r.entryId}|${r.colKey}">${r.cash>0?'₹'+r.cash.toFixed(2):'—'}</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
-      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
-      <td style="width:22px">${isAdmin?`<button class="cb-del-btn" title="Admin: Remove this entry" onclick="delAutoRec(${idx})">✕</button>`:''}</td></tr>`).join('');
-    recRows+=manRec.map(r=>`<tr style="background:#f0f8ff">
+      <td class="${r.bank>0?'cb-amount-cell':'cb-auto-cell'}" style="${r.bank>0?'':'text-align:right;color:#8babc8'}">${r.bank>0?'₹'+r.bank.toFixed(2):'—'}</td>
+      <td style="width:22px">${isAdmin?`<button class="cb-del-btn" title="Admin: Remove this entry" onclick="delAutoRec(${idx})">✕</button>`:''}</td>
+    </tr>`).join('');
+    /* Manual receipts */
+    recRows += manRec.map(r=>`<tr style="background:#f0f8ff">
       <td>${cbI(r.id,'date',r.date,'date','',false)}</td>
       <td>${cbI(r.id,'desc',r.desc,'text','Description...',false)}</td>
       <td>${cbI(r.id,'cash',r.cash,'number','0',false)}</td>
       <td>${cbI(r.id,'treasury',r.treasury,'number','0',false)}</td>
       <td>${cbI(r.id,'bank',r.bank,'number','0',false)}</td>
-      <td><button class="cb-del-btn" onclick="delF01ManualRec(${r.id})">✕</button></td></tr>`).join('');
+      <td><button class="cb-del-btn" onclick="delF01ManualRec(${r.id})">✕</button></td>
+    </tr>`).join('');
+    /* Contra entries — appear on Bank column in Receipts */
+    recRows += contraFY.map(c=>`<tr style="background:#f0f0ff">
+      <td class="cb-auto-cell">${c.date||'—'}</td>
+      <td class="cb-auto-cell">ക്യാഷ് → ബാങ്ക്<span class="cb-auto-badge" style="background:#c8e0ff;color:#003080">CONTRA</span></td>
+      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
+      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
+      <td class="cb-amount-cell">₹${(parseFloat(c.amount)||0).toFixed(2)}</td>
+      <td></td>
+    </tr>`).join('');
   }
 
-  /* Payment rows */
+  /* ── Payment rows ── */
   let payRows='';
-  if(!ap.length&&!manPay.length){
+  if(!ap.length && !manPay.length && !contraFY.length){
     payRows=`<tr><td colspan="9" style="text-align:center;padding:1rem;color:#8babc8;font-size:.72rem">No approved expenditure entries for FY ${fy.fullLabel}. Submit Form 03 entries and Admin must approve them.</td></tr>`;
   } else {
-    payRows+=ap.map((p,idx)=>`<tr>
+    payRows += ap.map((p,idx)=>`<tr>
       <td class="cb-auto-cell" data-ce-auto="f03|${p.entryId}|date">${p.date||'—'}</td>
       <td class="cb-auto-cell" data-ce-auto="f03|${p.entryId}|voucher">${p.voucher||'—'}</td>
       <td class="cb-auto-cell" data-ce-auto="f03|${p.entryId}|desc">${p.desc}<span class="cb-auto-badge cb-auto-badge-pay">F03</span></td>
@@ -1638,8 +1794,9 @@ function renderF01(){
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
-      <td style="width:22px">${isAdmin?`<button class="cb-del-btn" title="Admin: Remove this entry" onclick="delAutoPay(${idx})">✕</button>`:''}</td></tr>`).join('');
-    payRows+=manPay.map(p=>`<tr style="background:#fff5f0">
+      <td style="width:22px">${isAdmin?`<button class="cb-del-btn" title="Admin: Remove this entry" onclick="delAutoPay(${idx})">✕</button>`:''}</td>
+    </tr>`).join('');
+    payRows += manPay.map(p=>`<tr style="background:#fff5f0">
       <td>${cbI(p.id,'date',p.date,'date','',true)}</td>
       <td>${cbI(p.id,'voucher',p.voucher,'text','V-001',true)}</td>
       <td>${cbI(p.id,'desc',p.desc,'text','Description...',true)}</td>
@@ -1648,8 +1805,23 @@ function renderF01(){
       <td>${cbI(p.id,'bank',p.bank,'number','0',true)}</td>
       <td>${cbI(p.id,'checkNo',p.checkNo,'text','—',true)}</td>
       <td>${cbI(p.id,'remarks',p.remarks,'text','—',true)}</td>
-      <td><button class="cb-del-btn" onclick="delF01ManualPay(${p.id})">✕</button></td></tr>`).join('');
+      <td><button class="cb-del-btn" onclick="delF01ManualPay(${p.id})">✕</button></td>
+    </tr>`).join('');
+    /* Contra entries — appear on Cash column in Payments */
+    payRows += contraFY.map(c=>`<tr style="background:#f0f0ff">
+      <td class="cb-auto-cell">${c.date||'—'}</td>
+      <td class="cb-auto-cell">—</td>
+      <td class="cb-auto-cell">ക്യാഷ് → ബാങ്ക്<span class="cb-auto-badge cb-auto-badge-pay" style="background:#ffe0c8;color:#5a1000">CONTRA</span></td>
+      <td class="cb-amount-cell-pay">₹${(parseFloat(c.amount)||0).toFixed(2)}</td>
+      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
+      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
+      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
+      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
+      <td></td>
+    </tr>`).join('');
   }
+
+  const ob0=getOB(), obT=getOBT(), obB=getOBB();
 
   ws.innerHTML=`
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin-bottom:.25rem">
@@ -1657,55 +1829,128 @@ function renderF01(){
       <div style="font-size:.62rem;color:#8babc8;margin-top:1px">FY ${fy.fullLabel} · Approved entries from Forms 02 &amp; 03 · Manual rows supported</div></div>
       <span class="status-pill pill-pass">Live · FY ${fy.label}</span></div>
     ${adminReviewHtml}
+
+    <!-- Opening Balance strip -->
     <div class="ob-strip" style="margin-top:.6rem">
       <label style="font-size:.75rem;color:#5a7ba8;white-space:nowrap;font-family:'Public Sans',sans-serif">ആരംഭ ബാക്കി / Opening Balance (FY ${fy.fullLabel}):</label>
       <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
         <div><div style="font-size:.6rem;color:#8babc8;margin-bottom:2px">Cash (₹)</div><input class="ob-input" type="number" min="0" step="0.01" value="${ob0.toFixed(2)}" oninput="onObChange('OB',this.value)" placeholder="0.00"></div>
         <div><div style="font-size:.6rem;color:#8babc8;margin-bottom:2px">Treasury (₹)</div><input class="ob-input" type="number" min="0" step="0.01" value="${obT.toFixed(2)}" oninput="onObChange('OB_TREA',this.value)" placeholder="0.00"></div>
         <div><div style="font-size:.6rem;color:#8babc8;margin-bottom:2px">Bank (₹)</div><input class="ob-input" type="number" min="0" step="0.01" value="${obB.toFixed(2)}" oninput="onObChange('OB_BANK',this.value)" placeholder="0.00"></div>
-      </div></div>
+      </div>
+    </div>
+
+    <!-- Cash Book panels -->
     <div class="cb-wrap">
       <div class="cb-panel">
-        <div class="cb-panel-hdr cb-receipt-hdr"><span>▲ വരവ് — Receipts</span><span class="cb-panel-sub">${ar.length} auto + ${manRec.length} manual</span></div>
+        <div class="cb-panel-hdr cb-receipt-hdr"><span>▲ വരവ് — Receipts</span><span class="cb-panel-sub">${ar.length} auto + ${manRec.length} manual${contraFY.length?' + '+contraFY.length+' contra':''}</span></div>
         <div class="cb-tbl-scroll"><table class="cb-table cb-receipt-table">
           <thead><tr class="cb-receipt-thead">
-            <th style="min-width:98px;text-align:left">തിയതി</th><th style="min-width:135px;text-align:left">വിവരണം</th>
-            <th style="min-width:68px">ക്യാഷ് (₹)</th><th style="min-width:68px">ട്രഷറി</th><th style="min-width:68px">ബാങ്ക്</th><th style="width:22px"></th>
+            <th style="min-width:98px;text-align:left">തിയതി</th>
+            <th style="min-width:135px;text-align:left">വിവരണം</th>
+            <th style="min-width:68px">ക്യാഷ് (₹)</th>
+            <th style="min-width:68px">ട്രഷറി</th>
+            <th style="min-width:68px">ബാങ്ക്</th>
+            <th style="width:22px"></th>
           </tr></thead>
           <tbody>${recRows}</tbody>
-          <tfoot><tr class="cb-foot-row"><td colspan="2" style="text-align:left">ആകെ — Total Receipts</td>
-            <td id="cb-total-rec" colspan="3">${fmt(totalRec)}</td><td></td></tr></tfoot>
+          <tfoot><tr class="cb-foot-row">
+            <td colspan="2" style="text-align:left">ആകെ — Total Receipts</td>
+            <td id="cb-total-rec" colspan="3">${fmt(totRec)}</td>
+            <td></td>
+          </tr></tfoot>
         </table></div>
-        <div class="cb-add-row-strip"><button class="cb-add-btn" onclick="addF01ManualRec()">+ Manual Receipt</button></div>
+        <div class="cb-add-row-strip">
+          <button class="cb-add-btn" onclick="addF01ManualRec()">+ Manual Receipt</button>
+          <button class="cb-add-btn" onclick="openContraModal()" style="border-color:#9b8dff;color:#3500c8;background:#f3f0ff">🏦 Cash → Bank</button>
+        </div>
       </div>
       <div class="cb-panel">
-        <div class="cb-panel-hdr cb-payment-hdr"><span>▼ ചെലവ് — Payments</span><span class="cb-panel-sub">${ap.length} auto + ${manPay.length} manual</span></div>
+        <div class="cb-panel-hdr cb-payment-hdr"><span>▼ ചെലവ് — Payments</span><span class="cb-panel-sub">${ap.length} auto + ${manPay.length} manual${contraFY.length?' + '+contraFY.length+' contra':''}</span></div>
         <div class="cb-tbl-scroll"><table class="cb-table cb-payment-table">
           <thead><tr class="cb-payment-thead">
-            <th style="min-width:98px;text-align:left">തിയതി</th><th style="min-width:68px;text-align:left">വൗച്ചർ</th>
-            <th style="min-width:135px;text-align:left">വിവരണം</th><th style="min-width:68px">ക്യാഷ്</th>
-            <th style="min-width:68px">ട്രഷറി</th><th style="min-width:68px">ബാങ്ക്</th>
-            <th style="min-width:68px">ചെക്ക് നം.</th><th style="min-width:78px;text-align:left">കുറിപ്പ്</th><th style="width:22px"></th>
+            <th style="min-width:98px;text-align:left">തിയതി</th>
+            <th style="min-width:68px;text-align:left">വൗച്ചർ</th>
+            <th style="min-width:135px;text-align:left">വിവരണം</th>
+            <th style="min-width:68px">ക്യാഷ്</th>
+            <th style="min-width:68px">ട്രഷറി</th>
+            <th style="min-width:68px">ബാങ്ക്</th>
+            <th style="min-width:68px">ചെക്ക് നം.</th>
+            <th style="min-width:78px;text-align:left">കുറിപ്പ്</th>
+            <th style="width:22px"></th>
           </tr></thead>
           <tbody>${payRows}</tbody>
-          <tfoot><tr class="cb-foot-row-pay"><td colspan="3" style="text-align:left">ആകെ — Total Payments</td>
-            <td id="cb-total-pay" colspan="5">${fmt(totalPay)}</td><td></td></tr></tfoot>
+          <tfoot><tr class="cb-foot-row-pay">
+            <td colspan="3" style="text-align:left">ആകെ — Total Payments</td>
+            <td id="cb-total-pay" colspan="5">${fmt(totPay)}</td>
+            <td></td>
+          </tr></tfoot>
         </table></div>
-        <div class="cb-add-row-strip cb-add-row-strip-pay"><button class="cb-add-btn cb-add-btn-pay" onclick="addF01ManualPay()">+ Manual Payment</button></div>
+        <div class="cb-add-row-strip cb-add-row-strip-pay">
+          <button class="cb-add-btn cb-add-btn-pay" onclick="addF01ManualPay()">+ Manual Payment</button>
+        </div>
       </div>
     </div>
-    <div class="cb-summary-bar">
-      <div class="cb-summary-box cb-sum-income"><div class="cb-sum-lbl" style="color:#3b6d11">Total Receipts</div><div class="cb-sum-val" style="color:#3b6d11">${fmt(totalRec)}</div></div>
-      <div class="cb-summary-box cb-sum-expense"><div class="cb-sum-lbl" style="color:#a32d2d">Total Payments</div><div class="cb-sum-val" style="color:#a32d2d">${fmt(totalPay)}</div></div>
-      <div class="cb-summary-box cb-sum-balance"><div class="cb-sum-lbl" style="color:#0040a1">Closing Balance</div><div class="cb-sum-val" style="color:${closing<0?'#a32d2d':'#0040a1'}">${fmtSigned(closing)}</div></div>
+
+    <!-- 5-box summary bar: Receipts | Payments | Cash Closing | Treasury Closing | Bank Closing -->
+    <div class="cb-summary-bar" style="grid-template-columns:repeat(5,1fr);margin-top:.8rem">
+      <div class="cb-summary-box cb-sum-income">
+        <div class="cb-sum-lbl" style="color:#3b6d11">Total Receipts</div>
+        <div class="cb-sum-val" style="color:#3b6d11;font-size:.85rem">${fmt(totRec)}</div>
+      </div>
+      <div class="cb-summary-box cb-sum-expense">
+        <div class="cb-sum-lbl" style="color:#a32d2d">Total Payments</div>
+        <div class="cb-sum-val" style="color:#a32d2d;font-size:.85rem">${fmt(totPay)}</div>
+      </div>
+      <div class="cb-summary-box cb-sum-balance">
+        <div class="cb-sum-lbl" style="color:#0040a1;font-size:.62rem">💵 Cash Balance</div>
+        <div class="cb-sum-val" style="color:${closC<0?'#a32d2d':'#0040a1'};font-size:.85rem">${fmtSigned(closC)}</div>
+      </div>
+      <div class="cb-summary-box" style="background:#e8f5e8">
+        <div class="cb-sum-lbl" style="color:#1a5c2a;font-size:.62rem">🏛 Treasury Balance</div>
+        <div class="cb-sum-val" style="color:${closT<0?'#a32d2d':'#1a5c2a'};font-size:.85rem">${fmtSigned(closT)}</div>
+      </div>
+      <div class="cb-summary-box" style="background:#e0f0ff">
+        <div class="cb-sum-lbl" style="color:#003080;font-size:.62rem">🏦 Bank Balance</div>
+        <div class="cb-sum-val" style="color:${closB<0?'#a32d2d':'#003080'};font-size:.85rem">${fmtSigned(closB)}</div>
+      </div>
     </div>
-    <div class="cb-closing-bar" id="cb-closing-bar" style="background:${closing<0?'#6b1a1a':'#0040a1'};margin-top:.6rem">
-      <div><div style="color:#a8c9ff;font-size:.75rem;font-family:'Public Sans',sans-serif">അന്തിമ ബാക്കി — Closing Balance <span style="font-size:.6rem;opacity:.75">(FY ${fy.fullLabel})</span></div>
-      <div style="color:#c8e0ff;font-size:.62rem;margin-top:2px">Total Receipts − Total Payments</div></div>
-      <span id="cb-closing" style="color:#fff;font-size:1.15rem;font-weight:700;font-family:'Public Sans',sans-serif">${fmtSigned(closing)}</span>
+
+    <!-- 3-column closing bar -->
+    <div class="cb-closing-bar" id="cb-closing-bar" style="background:${closing<0?'#6b1a1a':'#0040a1'};margin-top:.6rem;flex-direction:column;gap:.4rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:.5rem">
+        <div>
+          <div style="color:#a8c9ff;font-size:.75rem;font-family:'Public Sans',sans-serif">അന്തിമ ബാക്കി — Closing Balance <span style="font-size:.6rem;opacity:.75">(FY ${fy.fullLabel})</span></div>
+          <div style="color:#c8e0ff;font-size:.6rem;margin-top:2px">Opening Balance + Receipts − Payments</div>
+        </div>
+        <div style="display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap">
+          <div style="text-align:center">
+            <div style="font-size:.58rem;color:#a8c9ff;font-family:'Public Sans',sans-serif;margin-bottom:2px">💵 Cash</div>
+            <div id="cb-closing-cash" style="color:${closC<0?'#ffaaaa':'#fff'};font-size:.92rem;font-weight:700;font-family:'Public Sans',sans-serif">${fmtSigned(closC)}</div>
+          </div>
+          <div style="width:1px;height:28px;background:rgba(255,255,255,.2)"></div>
+          <div style="text-align:center">
+            <div style="font-size:.58rem;color:#a8c9ff;font-family:'Public Sans',sans-serif;margin-bottom:2px">🏛 Treasury</div>
+            <div id="cb-closing-trea" style="color:${closT<0?'#ffaaaa':'#fff'};font-size:.92rem;font-weight:700;font-family:'Public Sans',sans-serif">${fmtSigned(closT)}</div>
+          </div>
+          <div style="width:1px;height:28px;background:rgba(255,255,255,.2)"></div>
+          <div style="text-align:center">
+            <div style="font-size:.58rem;color:#a8c9ff;font-family:'Public Sans',sans-serif;margin-bottom:2px">🏦 Bank</div>
+            <div id="cb-closing-bank" style="color:${closB<0?'#ffaaaa':'#fff'};font-size:.92rem;font-weight:700;font-family:'Public Sans',sans-serif">${fmtSigned(closB)}</div>
+          </div>
+          <div style="width:1px;height:28px;background:rgba(255,255,255,.35)"></div>
+          <div style="text-align:center;background:rgba(255,255,255,.1);border-radius:8px;padding:.3rem .75rem">
+            <div style="font-size:.58rem;color:#a8c9ff;font-family:'Public Sans',sans-serif;margin-bottom:2px">ആകെ</div>
+            <span id="cb-closing" style="color:${closing<0?'#ffaaaa':'#fff'};font-size:1.1rem;font-weight:700;font-family:'Public Sans',sans-serif">${fmtSigned(closing)}</span>
+          </div>
+        </div>
+      </div>
+      ${sumContra>0?`<div style="font-size:.65rem;color:#c8e0ff;text-align:right;opacity:.85">🔄 Contra (Cash→Bank): ${fmt(sumContra)}</div>`:''}
     </div>
+
     <div class="action-row no-print">
       <button class="btn-primary" onclick="saveF01ManualEntries()">✓ Save Manual Entries</button>
+      <button class="btn-secondary" onclick="openContraModal()">🏦 Cash → Bank Deposit</button>
       <button class="btn-secondary" onclick="switchTabByIdx(1)">→ Form 02</button>
       <button class="btn-secondary" onclick="switchTabByIdx(2)">→ Form 03</button>
       <button class="btn-print" onclick="printForm()">🖨 Print Landscape</button>
@@ -1963,27 +2208,55 @@ function aggregateF01(){
   const ob0=getOB(), obT=getOBT(), obB=getOBB();
   const recMap={}, payMap={};
   if(ob0||obT||obB) recMap['ആരംഭ ബാക്കി (Opening Balance)']={cash:ob0,treasury:obT,bank:obB};
+
+  /* Auto-receipts: respect all three columns (interest goes to bank via buildAutoReceipts) */
   buildAutoReceipts().forEach(r=>{
     const k=r.desc||'Miscellaneous';
     if(!recMap[k]) recMap[k]={cash:0,treasury:0,bank:0};
-    recMap[k].cash+=r.cash||0;
+    recMap[k].cash     += r.cash     || 0;
+    recMap[k].treasury += r.treasury || 0;
+    recMap[k].bank     += r.bank     || 0;
   });
+
+  /* Manual receipts */
   f01ManualRec.filter(r=>dateInFY(r.date,fy)).forEach(r=>{
     const k=r.desc||'Manual Receipt';
     if(!recMap[k]) recMap[k]={cash:0,treasury:0,bank:0};
-    recMap[k].cash+=parseFloat(r.cash)||0; recMap[k].treasury+=parseFloat(r.treasury)||0; recMap[k].bank+=parseFloat(r.bank)||0;
+    recMap[k].cash     += parseFloat(r.cash)     || 0;
+    recMap[k].treasury += parseFloat(r.treasury) || 0;
+    recMap[k].bank     += parseFloat(r.bank)     || 0;
   });
+
+  /* Auto-payments */
   buildAutoPayments().forEach(p=>{
     const k=p.desc||'Miscellaneous';
     if(!payMap[k]) payMap[k]={cash:0,treasury:0,bank:0};
-    payMap[k].cash+=p.cash||0;
+    payMap[k].cash += p.cash || 0;
   });
+
+  /* Manual payments */
   f01ManualPay.filter(p=>dateInFY(p.date,fy)).forEach(p=>{
     const k=p.desc||'Manual Payment';
     if(!payMap[k]) payMap[k]={cash:0,treasury:0,bank:0};
-    payMap[k].cash+=parseFloat(p.cash)||0; payMap[k].treasury+=parseFloat(p.treasury)||0; payMap[k].bank+=parseFloat(p.bank)||0;
+    payMap[k].cash     += parseFloat(p.cash)     || 0;
+    payMap[k].treasury += parseFloat(p.treasury) || 0;
+    payMap[k].bank     += parseFloat(p.bank)     || 0;
   });
-  return {recMap,payMap};
+
+  /* Contra entries: BANK receipt + CASH payment (net total = zero; shifts cash→bank) */
+  const CONTRA_KEY = 'ക്യാഷ് → ബാങ്ക് ഡിപ്പോസിറ്റ് (Contra)';
+  f01ContraEntries.filter(c=>dateInFY(c.date,fy)).forEach(c=>{
+    const amt = parseFloat(c.amount) || 0;
+    if(!amt) return;
+    /* Receipt side: bank column */
+    if(!recMap[CONTRA_KEY]) recMap[CONTRA_KEY]={cash:0,treasury:0,bank:0};
+    recMap[CONTRA_KEY].bank += amt;
+    /* Payment side: cash column */
+    if(!payMap[CONTRA_KEY]) payMap[CONTRA_KEY]={cash:0,treasury:0,bank:0};
+    payMap[CONTRA_KEY].cash += amt;
+  });
+
+  return {recMap, payMap};
 }
 
 function renderFinal(){
@@ -2022,7 +2295,17 @@ function renderFinal(){
   const totPT=payKeys.reduce((s,k)=>s+payMap[k].treasury,0);
   const totPB=payKeys.reduce((s,k)=>s+payMap[k].bank,0);
   const totPay=totPC+totPT+totPB;
-  const closC=totRC-totPC, closT=totRT-totPT, closB=totRB-totPB, closing=closC+closT+closB;
+ /* ── Closing balance mapping — column-derived (no manual override needed) ──
+     closC (പണം)    → OB.cash + Cash Receipts − Cash Payments − Contra deposited
+     closT (ട്രഷറി) → OB.trea + Treasury Receipts − Treasury Payments
+     closB (ബാങ്ക്)  → OB.bank + Bank Receipts − Bank Payments + Contra deposited
+     (Contra entries appear in both recMap.bank and payMap.cash via aggregateF01,
+      so the arithmetic above is implicit in the column totals.)
+     closing         → closC + closT + closB (all three columns)               */
+  const closC = totRC - totPC;
+  const closT = totRT - totPT;
+  const closB = totRB - totPB;
+  const closing = closC + closT + closB;
 
   /* Returns a <td> — admin gets contentEditable with override support, others get plain.
      On blur the new value is captured and persisted to FINAL_OVERRIDES automatically. */
@@ -2131,13 +2414,13 @@ function renderFinal(){
           </tfoot>
         </table>
       </div>
-      <div class="rpt-summary-hdr">
+<div class="rpt-summary-hdr">
         <div class="rpt-summary-box"><div class="rpt-summary-lbl">ആകെ വരവ്</div><div class="rpt-summary-val" style="color:#3b6d11">${a(totRec)}</div></div>
         <div class="rpt-summary-box"><div class="rpt-summary-lbl">ആകെ ചെലവ്</div><div class="rpt-summary-val" style="color:#a32d2d">${a(totPay)}</div></div>
-        <div class="rpt-summary-box"><div class="rpt-summary-lbl">Cash Balance</div><div class="rpt-summary-val" style="color:${closC<0?'#a32d2d':'#0040a1'}">${a(closC)}</div></div>
-        <div class="rpt-summary-box"><div class="rpt-summary-lbl">Treasury Balance</div><div class="rpt-summary-val" style="color:${closT<0?'#a32d2d':'#0040a1'}">${a(closT)}</div></div>
-        <div class="rpt-summary-box"><div class="rpt-summary-lbl">Bank Balance</div><div class="rpt-summary-val" style="color:${closB<0?'#a32d2d':'#0040a1'}">${a(closB)}</div></div>
-        <div class="rpt-summary-box" style="background:#e0eeff"><div class="rpt-summary-lbl">Closing Balance</div><div class="rpt-summary-val" style="color:${closing<0?'#a32d2d':'#0040a1'};font-size:1rem">${a(closing)}</div></div>
+        <div class="rpt-summary-box"><div class="rpt-summary-lbl">💵 പണം (Cash Closing)</div><div class="rpt-summary-val" style="color:${closC<0?'#a32d2d':'#0040a1'}">${a(closC)}</div></div>
+        <div class="rpt-summary-box"><div class="rpt-summary-lbl">🏛 ട്രഷറി (Treasury Closing)</div><div class="rpt-summary-val" style="color:${closT<0?'#a32d2d':'#0040a1'}">${a(closT)}</div></div>
+        <div class="rpt-summary-box"><div class="rpt-summary-lbl">🏦 ബാങ്ക് (Bank Closing)</div><div class="rpt-summary-val" style="color:${closB<0?'#a32d2d':'#0040a1'}">${a(closB)}</div></div>
+        <div class="rpt-summary-box" style="background:#e0eeff"><div class="rpt-summary-lbl">നീക്കിയിരിപ്പ് (Cash + Treasury + Bank)</div><div class="rpt-summary-val" style="color:${closing<0?'#a32d2d':'#0040a1'};font-size:1rem">${a(closing)}</div></div>
       </div>
 
       <div class="action-row no-print" style="margin-top:1rem">
@@ -2163,13 +2446,14 @@ function renderFinal(){
 ══════════════════════════════════════════════════════ */
 function clearAllData(){
   if(!confirm('⚠ Delete ALL audit data? (Forms 02, 03, 04, Cash Book, Submissions)\n\nThis cannot be undone.')) return;
-  [LS.F02,LS.F02_CUSTOM,LS.F02_PENDING,LS.F03,LS.F03_CUSTOM,LS.F03_PENDING,
-   LS.F01_REC,LS.F01_PAY,LS.F04,LS.OB,LS.OB_TREA,LS.OB_BANK,LS.FINAL_OVERRIDES,
+[LS.F02,LS.F02_CUSTOM,LS.F02_PENDING,LS.F03,LS.F03_CUSTOM,LS.F03_PENDING,
+   LS.F01_REC,LS.F01_PAY,LS.F01_CONTRA,LS.F04,
+   LS.OB,LS.OB_TREA,LS.OB_BANK,LS.FINAL_OVERRIDES,
    'hmc_f01_excl_rec_v1','hmc_f01_excl_pay_v1'].forEach(lsRm);
   f02CustomCols=[]; f03CustomCols=[];
   f02=[makeF02()]; f03=[makeF03()]; f04=[makeF04()];
   f02Pending=[]; f03Pending=[];
-  f01ManualRec=[]; f01ManualPay=[];
+  f01ManualRec=[]; f01ManualPay=[]; f01ContraEntries=[];
   f01ExcludedRec=[]; f01ExcludedPay=[];
   updatePendingBadge();
   showToast('All audit data cleared.','#6b1a1a');
@@ -2873,11 +3157,16 @@ function buildFinalPortraitHTML(dateLabel){
   const totPB=payKeys.reduce((s,k)=>s+payMap[k].bank,0);
   const totPay=totPC+totPT+totPB;
 
-  /* ── Step 3: closing balances ── */
-  const closC=totRC-totPC;
-  const closT=totRT-totPT;
-  const closB=totRB-totPB;
-  const closing=closC+closT+closB;
+/* ── Step 3: closing balances — column-derived, no manual override ──
+     closC (പണം)    → OB.cash + Cash Receipts − Cash Payments − Contra deposited
+     closT (ട്രഷറി) → OB.trea + Treasury Receipts − Treasury Payments
+     closB (ബാങ്ക്)  → OB.bank + Bank Receipts − Bank Payments + Contra deposited
+     (Contra entries are embedded in aggregateF01's recMap/payMap column totals.)
+     closing         → closC + closT + closB (all three columns)                   */
+  const closC = totRC - totPC;
+  const closT = totRT - totPT;
+  const closB = totRB - totPB;
+  const closing = closC + closT + closB;
 
   /* ── Step 4: Opening Balance entry ── */
   const OB_KEY='ആരംഭ ബാക്കി (Opening Balance)';
@@ -2953,13 +3242,13 @@ function buildFinalPortraitHTML(dateLabel){
       <thead>
         <tr>
           <th colspan="2" style="width:50%;background-color:#ADD8E6;color:#000;font-weight:bold;font-size:1rem">വരവ്</th>
-          <th colspan="2" style="width:50%;background-color:#ADD8E6;color:#000;font-weight:bold;font-size:1rem">ചെലവ്</th>
+          <th colspan="2" style="width:50%;background-color:#ADD8E6;color:#000;font-weight:bold;font-size:1rem;border-right:2.5pt solid #333">ചെലവ്</th>
         </tr>
         <tr>
           <th style="width:34%;text-align:center;padding-left:.6rem;background:#fff;color:#000;font-weight:bold;font-size:.8rem">ഇനം</th>
           <th style="width:16%;text-align:right;background:#fff;color:#000">തുക (₹)</th>
           <th style="width:34%;text-align:center;padding-left:.6rem;background:#fff;color:#000;font-weight:bold;font-size:.8rem">ഇനം</th>
-          <th style="width:16%;text-align:right;background:#fff;color:#000">തുക (₹)</th>
+          <th style="width:16%;text-align:right;background:#fff;color:#000;border-right:2.5pt solid #333">തുക (₹)</th>
         </tr>
       </thead>
       <tbody>
@@ -2969,42 +3258,49 @@ function buildFinalPortraitHTML(dateLabel){
         <tr class="pr-fpt-total">
           <td class="pr-fpt-lbl" style="font-weight:700">ആകെ വരവ്</td>
           <td class="pr-fpt-amt">${fmtA(totRec)}</td>
-          <td class="pr-fpt-lbl" style="font-weight:700">ആകെ ചെലവ്</td>
+          <td class="pr-fpt-lbl" style="font-weight:700;border-right: 2px solid #333;">ആകെ ചെലവ്</td>
           <td class="pr-fpt-amt">${fmtA(totPay)}</td>
         </tr>
 
-        <!-- Closing Balance row (നീക്കിയിരുപ്പ്) -->
-        <tr class="pr-fpt-closing">
-          <td colspan="2" style="padding:.2rem .55rem"></td>
-          <td class="pr-fpt-lbl" style="font-weight:700;color:#000">നീക്കിയിരുപ്പ്</td>
-          <td class="pr-fpt-amt" style="color:#000;font-weight:700">${fmtA(Math.abs(closing))}</td>
-        </tr>
+        <!-- നീക്കിയിരിപ്പ് — header -->
+<tr class="pr-fpt-closing">
+  <!-- border-right:1.5pt solid #333; എന്ന ഭാഗം ശ്രദ്ധിക്കുക -->
+  <td colspan="2" style="border:none; border-left:1.5pt solid #333; border-right:1.5pt solid #333; background:#fff; padding:.2rem .55rem"></td>
+  <td colspan="2"
+      style="font-weight:700;color:#000;text-align:center;letter-spacing:.03em;
+             font-family:'Noto Sans Malayalam','Public Sans',sans-serif;
+             border:1.5pt solid #333;background:#e0f0e8;border-right:2.5pt solid #333">
+    നീക്കിയിരിപ്പ്
+  </td>
+</tr>
 
-        <!-- Cash / Treasury / Bank closing breakdown -->
-        <tr class="pr-fpt-cash-bank">
-          <td colspan="2"></td>
-          <td class="pr-fpt-lbl" colspan="2">
-            <span style="display:inline-block;width:32%;vertical-align:top">
-              <strong>പണം:</strong><br>
-              <span style="font-size:.88rem;font-weight:700">${fmtA(Math.abs(closC))}</span>
-            </span>
-            <span style="display:inline-block;width:32%;vertical-align:top">
-              <strong>ട്രഷറി:</strong><br>
-              <span style="font-size:.88rem;font-weight:700">${fmtA(Math.abs(closT))}</span>
-            </span>
-            <span style="display:inline-block;width:32%;vertical-align:top">
-              <strong>ബാങ്ക്:</strong><br>
-              <span style="font-size:.88rem;font-weight:700">${fmtA(Math.abs(closB))}</span>
-            </span>
-          </td>
-        </tr>
+<!-- Cash breakdown row -->
+<tr class="pr-fpt-cash-bank">
+  <td colspan="2" style="border:none; border-left:1.5pt solid #333; border-right:1.5pt solid #333; background:#fff; padding:.2rem .55rem"></td>
+  <td class="pr-fpt-lbl" style="padding-left:1.4rem;font-style:italic">പണം</td>
+  <td class="pr-fpt-amt" style="font-weight:700;text-align:right;border-right:2.5pt solid #333">${fmtA(Math.abs(closC))}</td>
+</tr>
+
+<!-- Treasury breakdown row -->
+<tr class="pr-fpt-cash-bank">
+  <td colspan="2" style="border:none; border-left:1.5pt solid #333; border-right:1.5pt solid #333; background:#fff; padding:.2rem .55rem"></td>
+  <td class="pr-fpt-lbl" style="padding-left:1.4rem;font-style:italic">ട്രഷറി</td>
+  <td class="pr-fpt-amt" style="font-weight:700;text-align:right;border-right:2.5pt solid #333">${fmtA(Math.abs(closT))}</td>
+</tr>
+
+<!-- Bank breakdown row -->
+<tr class="pr-fpt-cash-bank">
+  <td colspan="2" style="border:none; border-left:1.5pt solid #333; border-right:1.5pt solid #333; background:#fff; padding:.2rem .55rem"></td>
+  <td class="pr-fpt-lbl" style="padding-left:1.4rem;font-style:italic">ബാങ്ക്</td>
+  <td class="pr-fpt-amt" style="font-weight:700;text-align:right;border-right:2.5pt solid #333">${fmtA(Math.abs(closB))}</td>
+</tr>
 
         <!-- Balance-check footer -->
         <tr style="background:#fff">
           <td class="pr-fpt-lbl" colspan="2" style="color:#000;font-size:.88rem;text-align:right;font-style:italic">
             ആകെ വരവ് = ${fmtA(totRec)}
           </td>
-          <td class="pr-fpt-lbl" colspan="2" style="color:#000;font-size:.88rem;text-align:right;font-style:italic">
+          <td class="pr-fpt-lbl" colspan="2" style="color:#000;font-size:.88rem;text-align:right;font-style:italic;border-right:2.5pt solid #333">
             ചെലവ് + ബാക്കി = ${fmtA(totPay+Math.abs(closing))}
           </td>
         </tr>
@@ -3015,7 +3311,7 @@ function buildFinalPortraitHTML(dateLabel){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;margin-top:1.5rem;padding-top:.85rem">
       <div><br><br><br></div>
       <div><br><br><br></div>
-      <div><br><strong>${org.adminName||'_______________'}</strong><br>${org.designation||''}<br>PEN: ${org.pen||'—'}</div>
+      <div><br><strong>${org.adminName||''}</strong><br>${org.designation||''}<br>PEN: ${org.pen||'—'}</div>
     </div>
   </div>`;
 }
