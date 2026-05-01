@@ -1311,7 +1311,7 @@ let f03CustomCols=lsGet(LS.F03_CUSTOM,[]);
 function f03AllCols(){return [...F03_FIXED,...f03CustomCols];}
 
 function makeF03(){
-  const base={id:Date.now()+Math.random(),date:'',voucher:'',remarks:'',status:'draft',rejReason:''};
+  const base={id:Date.now()+Math.random(),date:'',voucher:'',payMode:'bank',remarks:'',status:'draft',rejReason:''};
   f03AllCols().forEach(c=>{base[c.key]='';});
   return base;
 }
@@ -1371,9 +1371,15 @@ function f03Ni(id,key,val){
 function f03RowHtml(e){
   const id=e.id, isRej=e.status==='rejected';
   const numCells=f03AllCols().map(c=>f03Ni(id,c.key,e[c.key]||'')).join('');
+  const payMode=e.payMode||'bank';
+  const modeSelect=`<td><select class="f-inp f03-inp" style="min-width:68px;cursor:pointer" onchange="onF03Change(${id},'payMode',this.value)">
+    <option value="bank" ${payMode==='bank'?'selected':''}>🏦 Bank</option>
+    <option value="cash" ${payMode==='cash'?'selected':''}>💵 Cash</option>
+  </select></td>`;
   return `<tr class="${isRej?'rejected-row':''}">
     <td><input class="f-inp f03-inp" type="date" value="${e.date||''}" oninput="onF03Change(${id},'date',this.value)"></td>
     <td><input class="f-inp f03-inp" type="text" value="${e.voucher||''}" placeholder="V-001" oninput="onF03Change(${id},'voucher',this.value)"></td>
+    ${modeSelect}
     ${numCells}
     <td class="f03-total-cell" id="f03rt-${id}">${fmt(f03Total(e))}</td>
     <td><input class="f-inp f03-inp" type="text" value="${e.remarks||''}" placeholder="—" oninput="onF03Change(${id},'remarks',this.value)" style="min-width:72px"></td>
@@ -1416,6 +1422,7 @@ function renderF03(){
           <tr class="hdr-top">
             <th rowspan="2" style="min-width:108px;text-align:left;padding-left:.45rem">തീയതി<br><span style="font-weight:400;font-size:.58rem;opacity:.75">Date</span></th>
             <th rowspan="2" style="min-width:78px;text-align:left">വൗച്ചർ നം.<br><span style="font-weight:400;font-size:.58rem;opacity:.75">Voucher No.</span></th>
+            <th rowspan="2" style="min-width:72px;text-align:center;background:#4a1060">മോഡ്<br><span style="font-weight:400;font-size:.58rem;opacity:.75">Mode</span></th>
             ${fixedThTop}${customThTop}
             <th rowspan="2" style="min-width:72px;background:#300808;text-align:right;padding-right:.45rem">ആകെ (₹)<br><span style="font-weight:400;font-size:.58rem;opacity:.75">Total</span></th>
             <th rowspan="2" style="min-width:85px;text-align:left">കുറിപ്പ്<br><span style="font-weight:400;font-size:.58rem;opacity:.75">Remarks</span></th>
@@ -1561,12 +1568,26 @@ function buildAutoPayments(){
   const approved=f03Pending.filter(e=>e.status==='approved');
   approved.forEach(e=>{
     if(!dateInFY(e.date,fy)) return;            /* ← FY filter */
+    const mode=(e.payMode||'bank');              /* default to bank */
     f03AllCols().forEach(c=>{
       const val=parseFloat(e[c.key])||0;
-      if(val) rows.push({date:e.date||'',voucher:e.voucher||'',desc:c.ml,cash:val,source:'F03',entryId:e.id,colKey:c.key});
+      if(!val) return;
+      const toBank=(mode==='bank');
+      rows.push({
+        date    : e.date||'',
+        voucher : e.voucher||'',
+        desc    : c.ml,
+        cash    : toBank ? 0 : val,
+        treasury: 0,
+        bank    : toBank ? val : 0,
+        payMode : mode,
+        source  : 'F03',
+        entryId : e.id,
+        colKey  : c.key
+      });
     });
   });
-  return rows.filter(p=>!f01ExcludedPay.includes(p.date+'|'+p.voucher+'|'+p.desc+'|'+p.cash));
+  return rows.filter(p=>!f01ExcludedPay.includes(p.date+'|'+p.voucher+'|'+p.desc+'|'+(p.cash+p.bank)));
 }
 
 function onF01RecChange(id,field,val){
@@ -1675,7 +1696,7 @@ function delAutoRec(idx){
 function delAutoPay(idx){
   const ap=buildAutoPayments();
   const p=ap[idx]; if(!p) return;
-  const key=p.date+'|'+p.voucher+'|'+p.desc+'|'+p.cash;
+  const key=p.date+'|'+p.voucher+'|'+p.desc+'|'+(p.cash+p.bank);
   if(!f01ExcludedPay.includes(key)) f01ExcludedPay.push(key);
   lsSet('hmc_f01_excl_pay_v1',f01ExcludedPay); renderF01(); _syncAll();
 }
@@ -1835,9 +1856,9 @@ function renderF01(){
       <td class="cb-auto-cell" data-ce-auto="f03|${p.entryId}|date">${p.date||'—'}</td>
       <td class="cb-auto-cell" data-ce-auto="f03|${p.entryId}|voucher">${p.voucher||'—'}</td>
       <td class="cb-auto-cell" data-ce-auto="f03|${p.entryId}|desc">${p.desc}<span class="cb-auto-badge cb-auto-badge-pay">F03</span></td>
-      <td class="cb-amount-cell-pay" data-ce-auto="f03|${p.entryId}|${p.colKey}">₹${p.cash.toFixed(2)}</td>
+      <td class="${p.cash>0?'cb-amount-cell-pay':'cb-auto-cell'}" style="${p.cash>0?'':'text-align:right;color:#8babc8'}" data-ce-auto="f03|${p.entryId}|${p.colKey}">${p.cash>0?'₹'+p.cash.toFixed(2):'—'}</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
-      <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
+      <td class="${p.bank>0?'cb-amount-cell-pay':'cb-auto-cell'}" style="${p.bank>0?'':'text-align:right;color:#8babc8'}">${p.bank>0?'₹'+p.bank.toFixed(2):'—'}</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td class="cb-auto-cell" style="text-align:right;color:#8babc8">—</td>
       <td style="width:22px">${isAdmin?`<button class="cb-del-btn" title="Admin: Remove this entry" onclick="delAutoPay(${idx})">✕</button>`:''}</td>
@@ -2317,11 +2338,13 @@ function aggregateF01(){
     recMap[k].bank     += parseFloat(r.bank)     || 0;
   });
 
-  /* Auto-payments */
+  /* Auto-payments — route cash/bank/treasury based on payMode set in Form 03 */
   buildAutoPayments().forEach(p=>{
     const k=p.desc||'Miscellaneous';
     if(!payMap[k]) payMap[k]={cash:0,treasury:0,bank:0};
-    payMap[k].cash += p.cash || 0;
+    payMap[k].cash     += p.cash     || 0;
+    payMap[k].treasury += p.treasury || 0;
+    payMap[k].bank     += p.bank     || 0;
   });
 
   /* Manual payments */
@@ -2807,15 +2830,15 @@ function runPrintSearch(){
     if(f01HasData){
       /* Receipts table */
       const recTrs = [
-        ...ar.map(r=>`<tr><td>${r.date}</td><td>${r.desc} <span style="font-size:.58rem;background:#ddeeff;color:#0040a1;border-radius:2px;padding:0 3px">F02</span></td><td class="pr-num pr-total">${fmtA(r.cash)}</td><td>—</td><td>—</td></tr>`),
+        ...ar.map(r=>`<tr><td>${r.date}</td><td>${r.desc} <span style="font-size:.58rem;background:#ddeeff;color:#0040a1;border-radius:2px;padding:0 3px">F02</span></td><td class="pr-num pr-total">${r.cash>0?fmtA(r.cash):'—'}</td><td class="pr-num">${r.treasury>0?fmtA(r.treasury):'—'}</td><td class="pr-num pr-total">${r.bank>0?fmtA(r.bank):'—'}</td></tr>`),
         ...mr.map(r=>`<tr><td>${r.date||'—'}</td><td>${r.desc||'—'}</td><td class="pr-num">${parseFloat(r.cash)?fmtA(parseFloat(r.cash)):'—'}</td><td class="pr-num">${parseFloat(r.treasury)?fmtA(parseFloat(r.treasury)):'—'}</td><td class="pr-num">${parseFloat(r.bank)?fmtA(parseFloat(r.bank)):'—'}</td></tr>`),
       ];
       const payTrs = [
-        ...ap.map(p=>`<tr><td>${p.date}</td><td>${p.voucher||'—'}</td><td>${p.desc} <span style="font-size:.58rem;background:#ffe0e0;color:#6b1a1a;border-radius:2px;padding:0 3px">F03</span></td><td class="pr-num pr-total-pay">${fmtA(p.cash)}</td><td>—</td><td>—</td></tr>`),
+        ...ap.map(p=>`<tr><td>${p.date}</td><td>${p.voucher||'—'}</td><td>${p.desc} <span style="font-size:.58rem;background:#ffe0e0;color:#6b1a1a;border-radius:2px;padding:0 3px">F03</span></td><td class="pr-num pr-total-pay">${p.cash>0?fmtA(p.cash):'—'}</td><td class="pr-num">${p.treasury>0?fmtA(p.treasury):'—'}</td><td class="pr-num pr-total-pay">${p.bank>0?fmtA(p.bank):'—'}</td></tr>`),
         ...mp.map(p=>`<tr><td>${p.date||'—'}</td><td>${p.voucher||'—'}</td><td>${p.desc||'—'}</td><td class="pr-num">${parseFloat(p.cash)?fmtA(parseFloat(p.cash)):'—'}</td><td class="pr-num">${parseFloat(p.treasury)?fmtA(parseFloat(p.treasury)):'—'}</td><td class="pr-num">${parseFloat(p.bank)?fmtA(parseFloat(p.bank)):'—'}</td></tr>`),
       ];
-      const totRec = (ob0+obT+obB) + ar.reduce((s,r)=>s+r.cash,0) + mr.reduce((s,r)=>s+(parseFloat(r.cash)||0)+(parseFloat(r.treasury)||0)+(parseFloat(r.bank)||0),0);
-      const totPay = ap.reduce((s,p)=>s+p.cash,0) + mp.reduce((s,p)=>s+(parseFloat(p.cash)||0)+(parseFloat(p.treasury)||0)+(parseFloat(p.bank)||0),0);
+      const totRec = (ob0+obT+obB) + ar.reduce((s,r)=>s+(r.cash||0)+(r.treasury||0)+(r.bank||0),0) + mr.reduce((s,r)=>s+(parseFloat(r.cash)||0)+(parseFloat(r.treasury)||0)+(parseFloat(r.bank)||0),0);
+      const totPay = ap.reduce((s,p)=>s+(p.cash||0)+(p.treasury||0)+(p.bank||0),0) + mp.reduce((s,p)=>s+(parseFloat(p.cash)||0)+(parseFloat(p.treasury)||0)+(parseFloat(p.bank)||0),0);
       const closBal = totRec - totPay;
 
       f01Sect = `<div class="pr-form-body">
